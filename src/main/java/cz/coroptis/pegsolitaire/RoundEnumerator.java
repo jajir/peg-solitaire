@@ -86,24 +86,19 @@ public final class RoundEnumerator {
         final Path temporary = directories.inProgress(destinationRound);
         Files.createDirectory(temporary);
 
-        long processedStates = 0L;
-        long generatedMoves = 0L;
+        final ParallelRoundProcessor.ProcessingResult processingResult;
         long uniqueStates;
         try (SegmentIndex<Long, NullValue> destination = store.create(temporary)) {
-            do {
-                final long state = iterator.next().getKey();
-                generatedMoves += board.generateSuccessors(state,
-                        successor -> destination.put(
-                                symmetry.canonicalize(successor), NULL));
-                processedStates++;
-            } while (iterator.hasNext());
+            processingResult = new ParallelRoundProcessor(board, symmetry)
+                    .process(iterator, destination);
             destination.maintenance().compactAndWait();
             try (Stream<Entry<Long, NullValue>> output = destination.getStream()) {
                 uniqueStates = output.count();
             }
         }
         directories.publish(destinationRound);
-        return RoundResult.counted(sourceRound, processedStates,
-                generatedMoves, uniqueStates);
+        return RoundResult.counted(sourceRound,
+                processingResult.processedStates(),
+                processingResult.generatedMoves(), uniqueStates);
     }
 }

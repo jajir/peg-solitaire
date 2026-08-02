@@ -1,14 +1,11 @@
 package cz.coroptis.pegsolitaire;
 
-import java.nio.file.Path;
 import java.time.Duration;
 
 /**
  * Command-line entry point for one peg-solitaire enumeration round.
  */
 public final class PegSolitaireMain {
-
-    private static final Path DATA_ROOT = Path.of("/Volumes/ponrava/peg-solitaire");
 
     private PegSolitaireMain() {
     }
@@ -24,9 +21,11 @@ public final class PegSolitaireMain {
             System.exit(2);
         }
         final long started = System.nanoTime();
-        System.out.println("Peg solitaire data root: " + DATA_ROOT);
+        System.out.println("Peg solitaire data root: "
+                + ApplicationConfiguration.DATA_ROOT);
         try {
-            final RoundResult result = new RoundEnumerator(DATA_ROOT).runOneRound();
+            final RoundResult result = new RoundEnumerator(
+                    ApplicationConfiguration.DATA_ROOT).runOneRound();
             printResult(result, elapsed(started));
         } catch (Exception exception) {
             System.err.println("Round failed after " + elapsed(started) + ": "

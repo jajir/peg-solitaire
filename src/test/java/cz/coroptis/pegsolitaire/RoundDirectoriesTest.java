@@ -7,6 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -27,6 +28,7 @@ class RoundDirectoriesTest {
         Files.writeString(temporaryDirectory.resolve("9"), "not a directory");
 
         assertEquals(7, directories.latestCompletedRound().orElseThrow());
+        assertEquals(List.of(1, 7), directories.completedRounds());
     }
 
     @Test

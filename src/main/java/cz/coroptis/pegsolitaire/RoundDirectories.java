@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Comparator;
+import java.util.List;
 import java.util.OptionalInt;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -48,13 +49,29 @@ public final class RoundDirectories {
      * @throws IOException when the root cannot be listed
      */
     public OptionalInt latestCompletedRound() throws IOException {
+        final List<Integer> rounds = completedRounds();
+        if (rounds.isEmpty()) {
+            return OptionalInt.empty();
+        }
+        return OptionalInt.of(rounds.get(rounds.size() - 1));
+    }
+
+    /**
+     * Lists strictly numeric completed-round directories in ascending order.
+     *
+     * @return sorted completed round numbers
+     * @throws IOException when the root cannot be listed
+     */
+    public List<Integer> completedRounds() throws IOException {
         try (Stream<Path> entries = Files.list(root)) {
             return entries.filter(Files::isDirectory)
                     .map(path -> path.getFileName().toString())
                     .filter(name -> ROUND_NAME.matcher(name).matches())
                     .mapToInt(this::parseRound)
                     .filter(round -> round > 0)
-                    .max();
+                    .sorted()
+                    .boxed()
+                    .toList();
         }
     }
 

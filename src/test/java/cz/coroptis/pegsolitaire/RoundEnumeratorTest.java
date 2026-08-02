@@ -110,6 +110,24 @@ class RoundEnumeratorTest {
         assertEquals(2, keys(3).size());
     }
 
+    @Test
+    void parallelWorkersProduceExpectedPersistedFrontiers() throws Exception {
+        final RoundEnumerator enumerator = new RoundEnumerator(temporaryDirectory);
+        final long[] expectedUniqueStates = { 1L, 1L, 2L, 8L, 39L, 171L,
+                719L };
+
+        final RoundResult initialized = enumerator.runOneRound();
+        assertEquals(expectedUniqueStates[0], initialized.uniqueStates());
+        for (int round = 2; round <= expectedUniqueStates.length; round++) {
+            final RoundResult counted = enumerator.runOneRound();
+            assertEquals(round, counted.destinationRound());
+            assertEquals(expectedUniqueStates[round - 1],
+                    counted.uniqueStates());
+        }
+
+        assertEquals(719, keys(7).size());
+    }
+
     private void createEmptyRound(final int round) throws Exception {
         createRound(round, List.of());
     }
