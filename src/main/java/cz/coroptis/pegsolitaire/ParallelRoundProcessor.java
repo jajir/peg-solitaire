@@ -20,20 +20,22 @@ import org.hestiastore.index.segmentindex.SegmentIndex;
 
 /**
  * Reads source entries on its caller thread and processes one board per worker
- * task using a bounded eight-thread executor.
+ * task using a bounded fixed-thread executor.
  */
 final class ParallelRoundProcessor {
 
-    static final int WORKER_COUNT = 8;
-    static final int QUEUE_CAPACITY = 32;
-
     private final EnglishBoard board;
     private final BoardSymmetry symmetry;
+    private final int workerCount;
+    private final int queueCapacity;
 
     ParallelRoundProcessor(final EnglishBoard board,
-            final BoardSymmetry symmetry) {
+            final BoardSymmetry symmetry, final int workerCount,
+            final int queueCapacity) {
         this.board = board;
         this.symmetry = symmetry;
+        this.workerCount = workerCount;
+        this.queueCapacity = queueCapacity;
     }
 
     ProcessingResult process(
@@ -42,7 +44,7 @@ final class ParallelRoundProcessor {
         final ThreadPoolExecutor executor = createExecutor();
         final ExecutorCompletionService<Integer> completions =
                 new ExecutorCompletionService<>(executor);
-        final int maximumInFlight = WORKER_COUNT + QUEUE_CAPACITY;
+        final int maximumInFlight = workerCount + queueCapacity;
         int inFlight = 0;
         long processedStates = 0L;
         long generatedMoves = 0L;
@@ -97,8 +99,8 @@ final class ParallelRoundProcessor {
     }
 
     private ThreadPoolExecutor createExecutor() {
-        return new ThreadPoolExecutor(WORKER_COUNT, WORKER_COUNT, 0L,
-                TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(QUEUE_CAPACITY),
+        return new ThreadPoolExecutor(workerCount, workerCount, 0L,
+                TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(queueCapacity),
                 new WorkerThreadFactory(),
                 new BlockingRejectedExecutionHandler());
     }

@@ -18,10 +18,15 @@ import org.hestiastore.index.segmentindex.SegmentIndex;
  */
 public final class RoundEnumerator {
 
+    private static final int DEFAULT_WORKER_COUNT = 8;
+    private static final int DEFAULT_QUEUE_CAPACITY = 32;
+
     private final EnglishBoard board;
     private final BoardSymmetry symmetry;
     private final HestiaRoundStore store;
     private final RoundDirectories directories;
+    private final int workerCount;
+    private final int queueCapacity;
 
     /**
      * Creates an enumerator for one persistent data root.
@@ -29,10 +34,30 @@ public final class RoundEnumerator {
      * @param dataRoot persistent round root
      */
     public RoundEnumerator(final Path dataRoot) {
+        this(dataRoot, DEFAULT_WORKER_COUNT, DEFAULT_QUEUE_CAPACITY);
+    }
+
+    /**
+     * Creates an enumerator with explicit parallel processing limits.
+     *
+     * @param dataRoot persistent round root
+     * @param workerCount number of board-processing workers
+     * @param queueCapacity maximum queued board tasks
+     */
+    public RoundEnumerator(final Path dataRoot, final int workerCount,
+            final int queueCapacity) {
+        if (workerCount < 1) {
+            throw new IllegalArgumentException("workerCount must be positive");
+        }
+        if (queueCapacity < 1) {
+            throw new IllegalArgumentException("queueCapacity must be positive");
+        }
         board = new EnglishBoard();
         symmetry = new BoardSymmetry(board);
         store = new HestiaRoundStore();
         directories = new RoundDirectories(dataRoot);
+        this.workerCount = workerCount;
+        this.queueCapacity = queueCapacity;
     }
 
     /**
@@ -89,8 +114,8 @@ public final class RoundEnumerator {
         final ParallelRoundProcessor.ProcessingResult processingResult;
         long uniqueStates;
         try (SegmentIndex<Long, NullValue> destination = store.create(temporary)) {
-            processingResult = new ParallelRoundProcessor(board, symmetry)
-                    .process(iterator, destination);
+            processingResult = new ParallelRoundProcessor(board, symmetry,
+                    workerCount, queueCapacity).process(iterator, destination);
             destination.maintenance().compactAndWait();
             try (Stream<Entry<Long, NullValue>> output = destination.getStream()) {
                 uniqueStates = output.count();

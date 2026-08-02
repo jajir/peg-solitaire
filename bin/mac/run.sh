@@ -18,6 +18,11 @@ if [ ! -f "${APP_JAR}" ]; then
 fi
 
 cd "${PROJECT_DIR}"
-java -Xmx10g -jar "${APP_JAR}"
+java -Xmx10g -jar "${APP_JAR}" \
+    count \
+    --board english \
+    --directory /Volumes/ponrava/peg-solitaire \
+    --workers 8 \
+    --queue-capacity 32
 
 printf '\a'

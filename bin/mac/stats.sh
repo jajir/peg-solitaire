@@ -5,7 +5,6 @@ set -eu
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 APP_JAR="${PROJECT_DIR}/target/peg-solitaire-jar-with-dependencies.jar"
-STATS_MAIN="cz.coroptis.pegsolitaire.PegSolitaireStatsMain"
 
 if [ "$#" -ne 0 ]; then
     echo "Usage: $0" >&2
@@ -19,6 +18,9 @@ if [ ! -f "${APP_JAR}" ]; then
 fi
 
 cd "${PROJECT_DIR}"
-java -Xmx18g -cp "${APP_JAR}" "${STATS_MAIN}"
+java -Xmx18g -jar "${APP_JAR}" \
+    stats \
+    --board english \
+    --directory /Volumes/ponrava/peg-solitaire
 
 printf '\a'
