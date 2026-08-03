@@ -1,25 +1,27 @@
 package cz.coroptis.pegsolitaire;
 
 /**
- * Canonicalizes English-board states across the eight square symmetries.
+ * Canonicalizes square-board states across the eight rotations and reflections.
  */
 public final class BoardSymmetry {
 
     private static final int TRANSFORM_COUNT = 8;
     private static final int BOARD_MAX = 6;
 
+    private final PegSolitaireBoard board;
     private final int[][] transformedBits;
 
     /**
-     * Builds symmetry mappings for the supplied English-board geometry.
+     * Builds symmetry mappings for the supplied board geometry.
      *
      * @param board board geometry
      */
-    public BoardSymmetry(final EnglishBoard board) {
+    public BoardSymmetry(final PegSolitaireBoard board) {
         if (board == null) {
             throw new IllegalArgumentException("board must not be null");
         }
-        transformedBits = new int[TRANSFORM_COUNT][EnglishBoard.HOLE_COUNT];
+        this.board = board;
+        transformedBits = new int[TRANSFORM_COUNT][board.holeCount()];
         for (int row = 0; row <= BOARD_MAX; row++) {
             for (int column = 0; column <= BOARD_MAX; column++) {
                 final int sourceBit = board.bitAt(row, column);
@@ -38,7 +40,7 @@ public final class BoardSymmetry {
      * @return canonical state
      */
     public long canonicalize(final long state) {
-        if ((state & ~EnglishBoard.ALL_PEGS) != 0L) {
+        if ((state & ~board.allPegs()) != 0L) {
             throw new IllegalArgumentException("state contains bits outside the board");
         }
         long canonical = Long.MAX_VALUE;
@@ -53,7 +55,7 @@ public final class BoardSymmetry {
             throw new IllegalArgumentException("transform must be between 0 and 7");
         }
         long result = 0L;
-        for (int sourceBit = 0; sourceBit < EnglishBoard.HOLE_COUNT;
+        for (int sourceBit = 0; sourceBit < board.holeCount();
                 sourceBit++) {
             if ((state & (1L << sourceBit)) != 0L) {
                 result |= 1L << transformedBits[transform][sourceBit];
@@ -62,7 +64,7 @@ public final class BoardSymmetry {
         return result;
     }
 
-    private void mapTransforms(final EnglishBoard board, final int row,
+    private void mapTransforms(final PegSolitaireBoard board, final int row,
             final int column, final int sourceBit) {
         transformedBits[0][sourceBit] = board.bitAt(row, column);
         transformedBits[1][sourceBit] = board.bitAt(column, BOARD_MAX - row);

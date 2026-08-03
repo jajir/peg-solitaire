@@ -69,8 +69,9 @@ public final class PegSolitaireMain {
                 configuration.workerCount(), configuration.queueCapacity());
         try {
             final RoundResult result = new RoundEnumerator(
-                    configuration.directory(), configuration.workerCount(),
-                    configuration.queueCapacity()).runOneRound();
+                    configuration.directory(), configuration.board(),
+                    configuration.workerCount(), configuration.queueCapacity())
+                    .runOneRound();
             printResult(result, elapsed(started), output);
         } catch (Exception exception) {
             throw new IllegalStateException(

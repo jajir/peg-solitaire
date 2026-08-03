@@ -21,7 +21,7 @@ public final class RoundEnumerator {
     private static final int DEFAULT_WORKER_COUNT = 8;
     private static final int DEFAULT_QUEUE_CAPACITY = 32;
 
-    private final EnglishBoard board;
+    private final PegSolitaireBoard board;
     private final BoardSymmetry symmetry;
     private final HestiaRoundStore store;
     private final RoundDirectories directories;
@@ -34,7 +34,8 @@ public final class RoundEnumerator {
      * @param dataRoot persistent round root
      */
     public RoundEnumerator(final Path dataRoot) {
-        this(dataRoot, DEFAULT_WORKER_COUNT, DEFAULT_QUEUE_CAPACITY);
+        this(dataRoot, BoardVariant.ENGLISH, DEFAULT_WORKER_COUNT,
+                DEFAULT_QUEUE_CAPACITY);
     }
 
     /**
@@ -46,13 +47,30 @@ public final class RoundEnumerator {
      */
     public RoundEnumerator(final Path dataRoot, final int workerCount,
             final int queueCapacity) {
+        this(dataRoot, BoardVariant.ENGLISH, workerCount, queueCapacity);
+    }
+
+    /**
+     * Creates an enumerator for an explicit board and parallel processing limits.
+     *
+     * @param dataRoot persistent round root
+     * @param boardVariant board implementation
+     * @param workerCount number of board-processing workers
+     * @param queueCapacity maximum queued board tasks
+     */
+    public RoundEnumerator(final Path dataRoot,
+            final BoardVariant boardVariant, final int workerCount,
+            final int queueCapacity) {
         if (workerCount < 1) {
             throw new IllegalArgumentException("workerCount must be positive");
         }
         if (queueCapacity < 1) {
             throw new IllegalArgumentException("queueCapacity must be positive");
         }
-        board = new EnglishBoard();
+        if (boardVariant == null) {
+            throw new IllegalArgumentException("boardVariant must not be null");
+        }
+        board = boardVariant.createBoard();
         symmetry = new BoardSymmetry(board);
         store = new HestiaRoundStore();
         directories = new RoundDirectories(dataRoot);
@@ -81,7 +99,7 @@ public final class RoundEnumerator {
         final Path temporary = directories.inProgress(round);
         Files.createDirectory(temporary);
         try (SegmentIndex<Long, NullValue> index = store.create(temporary)) {
-            final long initial = symmetry.canonicalize(EnglishBoard.INITIAL_STATE);
+            final long initial = symmetry.canonicalize(board.initialState());
             index.put(initial, NULL);
             index.maintenance().compactAndWait();
         }

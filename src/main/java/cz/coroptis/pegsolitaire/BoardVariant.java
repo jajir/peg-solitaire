@@ -1,5 +1,7 @@
 package cz.coroptis.pegsolitaire;
 
+import java.util.function.Supplier;
+
 import org.apache.commons.cli.ParseException;
 
 /**
@@ -7,12 +9,16 @@ import org.apache.commons.cli.ParseException;
  */
 public enum BoardVariant {
 
-    ENGLISH("english");
+    ENGLISH("english", EnglishBoard::new),
+    EUROPEAN("european", EuropeanBoard::new);
 
     private final String optionValue;
+    private final Supplier<PegSolitaireBoard> boardSupplier;
 
-    BoardVariant(final String optionValue) {
+    BoardVariant(final String optionValue,
+            final Supplier<PegSolitaireBoard> boardSupplier) {
         this.optionValue = optionValue;
+        this.boardSupplier = boardSupplier;
     }
 
     /**
@@ -33,5 +39,14 @@ public enum BoardVariant {
 
     public String optionValue() {
         return optionValue;
+    }
+
+    /**
+     * Creates a new board engine for this variant.
+     *
+     * @return selected board implementation
+     */
+    public PegSolitaireBoard createBoard() {
+        return boardSupplier.get();
     }
 }

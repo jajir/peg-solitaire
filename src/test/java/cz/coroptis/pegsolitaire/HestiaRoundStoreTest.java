@@ -33,6 +33,14 @@ class HestiaRoundStoreTest {
 
         try (SegmentIndex<Long, NullValue> index = store.open(indexDirectory);
                 Stream<Entry<Long, NullValue>> entries = index.getStream()) {
+            assertEquals("peg-solitaire-round-reader",
+                    index.runtimeMonitoring().snapshot().indexName());
+            assertEquals(3, index.runtimeTuning().current().segment()
+                    .cachedSegmentLimit());
+            assertEquals(30_000, index.runtimeTuning().current().segment()
+                    .cacheKeyLimit());
+            assertEquals(5, index.runtimeTuning().current().chunkStoreCache()
+                    .pageLimit());
             assertEquals(List.of(7L, 12L),
                     entries.map(Entry::getKey).sorted().toList());
         }

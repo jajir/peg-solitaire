@@ -48,9 +48,15 @@ class PegSolitaireCliTest {
     }
 
     @Test
-    void rejectsUnknownBoardAndCommand() {
-        assertThrows(ParseException.class, () -> PegSolitaireCli.parse(new String[] {
+    void parsesEuropeanBoardAndRejectsUnknownBoardAndCommand() throws Exception {
+        final CliConfiguration european = PegSolitaireCli.parse(new String[] {
                 "count", "--board", "european", "--directory", "/tmp/rounds",
+                "--workers", "8", "--queue-capacity", "32"
+        });
+        assertEquals(BoardVariant.EUROPEAN, european.board());
+
+        assertThrows(ParseException.class, () -> PegSolitaireCli.parse(new String[] {
+                "count", "--board", "german", "--directory", "/tmp/rounds",
                 "--workers", "8", "--queue-capacity", "32"
         }));
         assertThrows(ParseException.class,

@@ -128,6 +128,21 @@ class RoundEnumeratorTest {
         assertEquals(719, keys(7).size());
     }
 
+    @Test
+    void europeanVariantPersistsEuropeanFrontiers() throws Exception {
+        final RoundEnumerator enumerator = new RoundEnumerator(temporaryDirectory,
+                BoardVariant.EUROPEAN, 4, 16);
+
+        enumerator.runOneRound();
+        final RoundResult secondRound = enumerator.runOneRound();
+        final RoundResult thirdRound = enumerator.runOneRound();
+
+        assertEquals(List.of(EuropeanBoard.INITIAL_STATE), keys(1));
+        assertEquals(1L, secondRound.uniqueStates());
+        assertEquals(3L, thirdRound.uniqueStates());
+        assertEquals(3, keys(3).size());
+    }
+
     private void createEmptyRound(final int round) throws Exception {
         createRound(round, List.of());
     }

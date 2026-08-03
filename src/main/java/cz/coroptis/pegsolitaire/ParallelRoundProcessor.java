@@ -24,12 +24,12 @@ import org.hestiastore.index.segmentindex.SegmentIndex;
  */
 final class ParallelRoundProcessor {
 
-    private final EnglishBoard board;
+    private final PegSolitaireBoard board;
     private final BoardSymmetry symmetry;
     private final int workerCount;
     private final int queueCapacity;
 
-    ParallelRoundProcessor(final EnglishBoard board,
+    ParallelRoundProcessor(final PegSolitaireBoard board,
             final BoardSymmetry symmetry, final int workerCount,
             final int queueCapacity) {
         this.board = board;
