@@ -6,17 +6,17 @@ import java.util.List;
 import java.util.function.LongConsumer;
 
 /**
- * Shared row-major encoding and orthogonal jump engine for symmetric 7x7 cross
+ * Shared row-major encoding and orthogonal jump engine for symmetric square cross
  * boards.
  */
 abstract class AbstractCrossBoard implements PegSolitaireBoard {
 
-    private static final int BOARD_SIZE = 7;
     private static final int[][] DIRECTIONS = {
             { -1, 0 }, { 1, 0 }, { 0, -1 }, { 0, 1 }
     };
 
     private final String boardName;
+    private final int boardSize;
     private final int holeCount;
     private final long allPegs;
     private final long initialState;
@@ -29,6 +29,7 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
             final int emptyColumn) {
         this.boardName = boardName;
         validateRowBounds(minimumColumnByRow, maximumColumnByRow);
+        boardSize = minimumColumnByRow.length;
         bitByCoordinate = createCoordinateMap(minimumColumnByRow,
                 maximumColumnByRow);
         holeCount = countHoles();
@@ -44,6 +45,11 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
         }
         initialState = allPegs ^ (1L << emptyBit);
         jumps = createJumps();
+    }
+
+    @Override
+    public final int boardSize() {
+        return boardSize;
     }
 
     @Override
@@ -106,8 +112,8 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
 
     @Override
     public final int bitAt(final int row, final int column) {
-        if (row < 0 || row >= BOARD_SIZE || column < 0
-                || column >= BOARD_SIZE) {
+        if (row < 0 || row >= boardSize || column < 0
+                || column >= boardSize) {
             return -1;
         }
         return bitByCoordinate[row][column];
@@ -116,24 +122,24 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
     private void validateRowBounds(final int[] minimumColumnByRow,
             final int[] maximumColumnByRow) {
         if (minimumColumnByRow == null || maximumColumnByRow == null
-                || minimumColumnByRow.length != BOARD_SIZE
-                || maximumColumnByRow.length != BOARD_SIZE) {
+                || minimumColumnByRow.length == 0
+                || minimumColumnByRow.length != maximumColumnByRow.length) {
             throw new IllegalArgumentException(
-                    "Board row bounds must contain exactly seven rows");
+                    "Board row bounds must contain the same number of rows");
         }
     }
 
     private int[][] createCoordinateMap(final int[] minimumColumnByRow,
             final int[] maximumColumnByRow) {
-        final int[][] map = new int[BOARD_SIZE][BOARD_SIZE];
+        final int[][] map = new int[boardSize][boardSize];
         for (int[] row : map) {
             Arrays.fill(row, -1);
         }
         int bit = 0;
-        for (int row = 0; row < BOARD_SIZE; row++) {
+        for (int row = 0; row < boardSize; row++) {
             final int minimum = minimumColumnByRow[row];
             final int maximum = maximumColumnByRow[row];
-            if (minimum < 0 || maximum >= BOARD_SIZE || minimum > maximum) {
+            if (minimum < 0 || maximum >= boardSize || minimum > maximum) {
                 throw new IllegalArgumentException(
                         "Invalid playable columns for row " + row);
             }
@@ -158,8 +164,8 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
 
     private List<Jump> createJumps() {
         final List<Jump> result = new ArrayList<>();
-        for (int row = 0; row < BOARD_SIZE; row++) {
-            for (int column = 0; column < BOARD_SIZE; column++) {
+        for (int row = 0; row < boardSize; row++) {
+            for (int column = 0; column < boardSize; column++) {
                 final int from = bitAt(row, column);
                 if (from >= 0) {
                     addJumpsFrom(result, row, column, from);

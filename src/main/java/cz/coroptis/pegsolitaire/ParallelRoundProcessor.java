@@ -14,6 +14,8 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.hestiastore.index.Entry;
 import org.hestiastore.index.datatype.NullValue;
 import org.hestiastore.index.segmentindex.SegmentIndex;
@@ -23,6 +25,11 @@ import org.hestiastore.index.segmentindex.SegmentIndex;
  * task using a bounded fixed-thread executor.
  */
 final class ParallelRoundProcessor {
+
+    static final long PROGRESS_INTERVAL_NANOS = TimeUnit.MINUTES.toNanos(1);
+
+    private static final Logger LOGGER = LogManager
+            .getLogger(ParallelRoundProcessor.class);
 
     private final PegSolitaireBoard board;
     private final BoardSymmetry symmetry;
@@ -46,14 +53,23 @@ final class ParallelRoundProcessor {
                 new ExecutorCompletionService<>(executor);
         final int maximumInFlight = workerCount + queueCapacity;
         int inFlight = 0;
+        long submittedStates = 0L;
         long processedStates = 0L;
         long generatedMoves = 0L;
+        long lastProgressLog = System.nanoTime();
         boolean successful = false;
         try {
             while (sourceEntries.hasNext()) {
                 final long state = sourceEntries.next().getKey();
                 completions.submit(() -> processBoard(state, destination));
                 inFlight++;
+                submittedStates++;
+                final long now = System.nanoTime();
+                if (isProgressDue(now, lastProgressLog)) {
+                    LOGGER.info("Submitted {} states for processing",
+                            submittedStates);
+                    lastProgressLog = now;
+                }
                 if (inFlight == maximumInFlight) {
                     generatedMoves += waitForCompletedTask(completions);
                     processedStates++;
@@ -70,6 +86,10 @@ final class ParallelRoundProcessor {
         } finally {
             shutdown(executor, successful);
         }
+    }
+
+    static boolean isProgressDue(final long now, final long lastProgressLog) {
+        return now - lastProgressLog >= PROGRESS_INTERVAL_NANOS;
     }
 
     private int processBoard(final long state,

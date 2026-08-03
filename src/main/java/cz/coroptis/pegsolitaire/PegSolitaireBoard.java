@@ -7,6 +7,8 @@ import java.util.function.LongConsumer;
  */
 public interface PegSolitaireBoard {
 
+    int boardSize();
+
     int holeCount();
 
     long allPegs();

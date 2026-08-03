@@ -6,9 +6,9 @@ package cz.coroptis.pegsolitaire;
 public final class BoardSymmetry {
 
     private static final int TRANSFORM_COUNT = 8;
-    private static final int BOARD_MAX = 6;
 
     private final PegSolitaireBoard board;
+    private final int boardMax;
     private final int[][] transformedBits;
 
     /**
@@ -21,9 +21,10 @@ public final class BoardSymmetry {
             throw new IllegalArgumentException("board must not be null");
         }
         this.board = board;
+        boardMax = board.boardSize() - 1;
         transformedBits = new int[TRANSFORM_COUNT][board.holeCount()];
-        for (int row = 0; row <= BOARD_MAX; row++) {
-            for (int column = 0; column <= BOARD_MAX; column++) {
+        for (int row = 0; row <= boardMax; row++) {
+            for (int column = 0; column <= boardMax; column++) {
                 final int sourceBit = board.bitAt(row, column);
                 if (sourceBit >= 0) {
                     mapTransforms(board, row, column, sourceBit);
@@ -67,14 +68,14 @@ public final class BoardSymmetry {
     private void mapTransforms(final PegSolitaireBoard board, final int row,
             final int column, final int sourceBit) {
         transformedBits[0][sourceBit] = board.bitAt(row, column);
-        transformedBits[1][sourceBit] = board.bitAt(column, BOARD_MAX - row);
-        transformedBits[2][sourceBit] = board.bitAt(BOARD_MAX - row,
-                BOARD_MAX - column);
-        transformedBits[3][sourceBit] = board.bitAt(BOARD_MAX - column, row);
-        transformedBits[4][sourceBit] = board.bitAt(row, BOARD_MAX - column);
-        transformedBits[5][sourceBit] = board.bitAt(BOARD_MAX - row, column);
+        transformedBits[1][sourceBit] = board.bitAt(column, boardMax - row);
+        transformedBits[2][sourceBit] = board.bitAt(boardMax - row,
+                boardMax - column);
+        transformedBits[3][sourceBit] = board.bitAt(boardMax - column, row);
+        transformedBits[4][sourceBit] = board.bitAt(row, boardMax - column);
+        transformedBits[5][sourceBit] = board.bitAt(boardMax - row, column);
         transformedBits[6][sourceBit] = board.bitAt(column, row);
-        transformedBits[7][sourceBit] = board.bitAt(BOARD_MAX - column,
-                BOARD_MAX - row);
+        transformedBits[7][sourceBit] = board.bitAt(boardMax - column,
+                boardMax - row);
     }
 }

@@ -10,7 +10,8 @@ import org.apache.commons.cli.ParseException;
 public enum BoardVariant {
 
     ENGLISH("english", EnglishBoard::new),
-    EUROPEAN("european", EuropeanBoard::new);
+    EUROPEAN("european", EuropeanBoard::new),
+    SENKU("senku", SenkuBoard::new);
 
     private final String optionValue;
     private final Supplier<PegSolitaireBoard> boardSupplier;

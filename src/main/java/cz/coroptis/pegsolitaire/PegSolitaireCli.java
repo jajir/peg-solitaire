@@ -118,7 +118,7 @@ final class PegSolitaireCli {
     private static Options commonOptions() {
         return new Options()
                 .addOption(requiredOption("b", "board", "name",
-                        "board implementation: english or european"))
+                        "board implementation: english, european, or senku"))
                 .addOption(requiredOption("d", "directory", "path",
                         "absolute persistent round directory"))
                 .addOption(Option.builder("h").longOpt("help")
