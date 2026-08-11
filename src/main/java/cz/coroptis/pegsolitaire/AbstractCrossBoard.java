@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.function.LongConsumer;
 
 /**
- * Shared row-major encoding and orthogonal jump engine for symmetric square cross
+ * Shared bitboard encoding and orthogonal jump engine for symmetric square cross
  * boards.
  */
 abstract class AbstractCrossBoard implements PegSolitaireBoard {
@@ -27,11 +27,19 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
             final int[] minimumColumnByRow,
             final int[] maximumColumnByRow, final int emptyRow,
             final int emptyColumn) {
+        this(boardName, expectedHoleCount, minimumColumnByRow,
+                maximumColumnByRow, emptyRow, emptyColumn, false);
+    }
+
+    AbstractCrossBoard(final String boardName, final int expectedHoleCount,
+            final int[] minimumColumnByRow,
+            final int[] maximumColumnByRow, final int emptyRow,
+            final int emptyColumn, final boolean hilbertNumbering) {
         this.boardName = boardName;
         validateRowBounds(minimumColumnByRow, maximumColumnByRow);
         boardSize = minimumColumnByRow.length;
         bitByCoordinate = createCoordinateMap(minimumColumnByRow,
-                maximumColumnByRow);
+                maximumColumnByRow, hilbertNumbering);
         holeCount = countHoles();
         if (holeCount != expectedHoleCount) {
             throw new IllegalStateException(boardName + " board must contain "
@@ -130,12 +138,13 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
     }
 
     private int[][] createCoordinateMap(final int[] minimumColumnByRow,
-            final int[] maximumColumnByRow) {
+            final int[] maximumColumnByRow,
+            final boolean hilbertNumbering) {
         final int[][] map = new int[boardSize][boardSize];
         for (int[] row : map) {
             Arrays.fill(row, -1);
         }
-        int bit = 0;
+        final List<int[]> coordinates = new ArrayList<>();
         for (int row = 0; row < boardSize; row++) {
             final int minimum = minimumColumnByRow[row];
             final int maximum = maximumColumnByRow[row];
@@ -144,10 +153,50 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
                         "Invalid playable columns for row " + row);
             }
             for (int column = minimum; column <= maximum; column++) {
-                map[row][column] = bit++;
+                coordinates.add(new int[] { row, column });
             }
         }
+        if (hilbertNumbering) {
+            final int hilbertSide = hilbertSide();
+            coordinates.sort((first, second) -> Integer.compare(
+                    hilbertDistance(first[0], first[1], hilbertSide),
+                    hilbertDistance(second[0], second[1], hilbertSide)));
+        }
+        for (int bit = 0; bit < coordinates.size(); bit++) {
+            final int[] coordinate = coordinates.get(bit);
+            map[coordinate[0]][coordinate[1]] = bit;
+        }
         return map;
+    }
+
+    private int hilbertSide() {
+        int side = 1;
+        while (side < boardSize) {
+            side <<= 1;
+        }
+        return side;
+    }
+
+    private static int hilbertDistance(final int row, final int column,
+            final int side) {
+        int x = column;
+        int y = row;
+        int distance = 0;
+        for (int scale = side / 2; scale > 0; scale /= 2) {
+            final int xRegion = (x & scale) == 0 ? 0 : 1;
+            final int yRegion = (y & scale) == 0 ? 0 : 1;
+            distance += scale * scale * ((3 * xRegion) ^ yRegion);
+            if (yRegion == 0) {
+                if (xRegion == 1) {
+                    x = side - 1 - x;
+                    y = side - 1 - y;
+                }
+                final int swap = x;
+                x = y;
+                y = swap;
+            }
+        }
+        return distance;
     }
 
     private int countHoles() {

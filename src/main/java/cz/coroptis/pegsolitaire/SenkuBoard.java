@@ -7,7 +7,7 @@ public final class SenkuBoard extends AbstractCrossBoard {
 
     public static final int HOLE_COUNT = 49;
     public static final long ALL_PEGS = (1L << HOLE_COUNT) - 1L;
-    public static final long INITIAL_STATE = 0x1fffffeffffffL;
+    public static final long INITIAL_STATE = 0x1fffffff7ffffL;
 
     private static final int[] MINIMUM_COLUMN_BY_ROW = {
             3, 3, 2, 0, 0, 0, 2, 3, 3
@@ -21,7 +21,7 @@ public final class SenkuBoard extends AbstractCrossBoard {
      */
     public SenkuBoard() {
         super("Senku", HOLE_COUNT, MINIMUM_COLUMN_BY_ROW,
-                MAXIMUM_COLUMN_BY_ROW, 4, 4);
+                MAXIMUM_COLUMN_BY_ROW, 4, 4, true);
         if (initialState() != INITIAL_STATE) {
             throw new IllegalStateException("Unexpected Senku board encoding");
         }

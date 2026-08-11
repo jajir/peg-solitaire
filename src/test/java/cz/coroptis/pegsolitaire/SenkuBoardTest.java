@@ -24,7 +24,7 @@ class SenkuBoardTest {
         assertEquals(9, board.boardSize());
         assertEquals(49, board.holeCount());
         assertEquals(48, Long.bitCount(board.initialState()));
-        assertEquals(24, board.bitAt(4, 4));
+        assertEquals(19, board.bitAt(4, 4));
         assertEquals(SenkuBoard.INITIAL_STATE, board.initialState());
 
         final String[] layout = {
@@ -38,6 +38,15 @@ class SenkuBoardTest {
                         board.bitAt(row, column) >= 0);
             }
         }
+    }
+
+    @Test
+    void senkuHolesFollowFilteredHilbertOrder() {
+        assertEquals(0, board.bitAt(3, 0));
+        assertEquals(7, board.bitAt(0, 3));
+        assertEquals(19, board.bitAt(4, 4));
+        assertEquals(43, board.bitAt(8, 3));
+        assertEquals(48, board.bitAt(3, 8));
     }
 
     @Test
