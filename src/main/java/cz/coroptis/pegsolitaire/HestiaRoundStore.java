@@ -16,11 +16,19 @@ import org.hestiastore.index.segmentindex.configuration.tuning.RuntimeTuningResu
 public final class HestiaRoundStore {
 
     private static final int CHUNK_KEY_LIMIT = 30_000;
+    private static final int DISK_BUFFER_SIZE_BYTES = 1024 * 64;
     private static final String INDEX_NAME = "peg-solitaire-round";
     private static final String READ_INDEX_NAME = INDEX_NAME + "-reader";
     private static final int READ_CACHED_SEGMENT_LIMIT = 3;
     private static final int READ_CACHE_KEY_LIMIT = 5_000;
     private static final int READ_CHUNK_PAGE_LIMIT = 5;
+    private static final int WRITE_CACHED_SEGMENT_LIMIT = 24;
+    private static final int WRITE_DELTA_CACHE_FILE_LIMIT = 4;
+    private static final int WRITE_INDEX_BUFFERED_KEY_LIMIT = 8_000_000;
+    private static final int WRITE_MAINTENANCE_CACHE_KEY_LIMIT = 2_000_000;
+    private static final int WRITE_SEGMENT_CACHE_KEY_LIMIT = 2_000_000;
+    private static final int WRITE_SEGMENT_MAX_KEYS = 30_000_000;
+    private static final int WRITE_SEGMENT_WRITE_CACHE_KEY_LIMIT = 1_000_000;
 
     /**
      * Creates an empty round index.
@@ -64,13 +72,19 @@ public final class HestiaRoundStore {
                 .identity(identity -> identity.name(INDEX_NAME))//
                 .wal(wal -> wal.disabled())//
                 .segment(segment -> segment//
-                        .cacheKeyLimit(1_000_001)//
+                        .cacheKeyLimit(WRITE_SEGMENT_CACHE_KEY_LIMIT)//
                         .chunkKeyLimit(CHUNK_KEY_LIMIT)//
-                        .maxKeys(10_000_000)//
-                        .cachedSegmentLimit(20))//
+                        .maxKeys(WRITE_SEGMENT_MAX_KEYS)//
+                        .cachedSegmentLimit(WRITE_CACHED_SEGMENT_LIMIT)//
+                        .deltaCacheFileLimit(WRITE_DELTA_CACHE_FILE_LIMIT))//
                 .writePath(writePath -> writePath//
-                        .segmentWriteCacheKeyLimit(1_000_000)//
-                        .maintenanceWriteCacheKeyLimit(1_010_000))//
+                        .segmentWriteCacheKeyLimit(
+                                WRITE_SEGMENT_WRITE_CACHE_KEY_LIMIT)//
+                        .maintenanceWriteCacheKeyLimit(
+                                WRITE_MAINTENANCE_CACHE_KEY_LIMIT)//
+                        .indexBufferedWriteKeyLimit(
+                                WRITE_INDEX_BUFFERED_KEY_LIMIT)//
+                        .segmentSplitKeyThreshold(WRITE_SEGMENT_MAX_KEYS))//
                 .bloomFilter(bloomFilter -> bloomFilter//
                         .indexSizeBytes(0)//
                         .hashFunctions(3))//
@@ -81,12 +95,12 @@ public final class HestiaRoundStore {
                         .backgroundAutoEnabled(true)//
                         .registryLifecycleThreads(4))//
                 .io(io -> io//
-                        .diskBufferSizeBytes(1024 * 16))//
+                        .diskBufferSizeBytes(DISK_BUFFER_SIZE_BYTES))//
                 .logging(logging -> logging//
-                        .contextEnabled(Boolean.TRUE))//
+                        .contextEnabled(Boolean.FALSE))//
                 .chunkStoreCache(chunkCache -> chunkCache//
-                    .pageLimit(1_000))//
-           .build();
+                        .pageLimit(0))//
+                .build();
     }
 
     private IndexConfiguration<Long, NullValue> readConfiguration() {
@@ -103,7 +117,7 @@ public final class HestiaRoundStore {
                         .backgroundAutoEnabled(false)//
                         .registryLifecycleThreads(1))//
                 .io(io -> io//
-                        .diskBufferSizeBytes(1024 * 16))//
+                        .diskBufferSizeBytes(DISK_BUFFER_SIZE_BYTES))//
                 .logging(logging -> logging//
                         .contextEnabled(Boolean.TRUE))//
                 .chunkStoreCache(chunkCache -> chunkCache//
