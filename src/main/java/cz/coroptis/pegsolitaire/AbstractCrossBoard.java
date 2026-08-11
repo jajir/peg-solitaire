@@ -6,8 +6,8 @@ import java.util.List;
 import java.util.function.LongConsumer;
 
 /**
- * Shared bitboard encoding and orthogonal jump engine for symmetric square cross
- * boards.
+ * Shared Hilbert-numbered bitboard and orthogonal jump engine for symmetric
+ * square cross boards.
  */
 abstract class AbstractCrossBoard implements PegSolitaireBoard {
 
@@ -27,19 +27,11 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
             final int[] minimumColumnByRow,
             final int[] maximumColumnByRow, final int emptyRow,
             final int emptyColumn) {
-        this(boardName, expectedHoleCount, minimumColumnByRow,
-                maximumColumnByRow, emptyRow, emptyColumn, false);
-    }
-
-    AbstractCrossBoard(final String boardName, final int expectedHoleCount,
-            final int[] minimumColumnByRow,
-            final int[] maximumColumnByRow, final int emptyRow,
-            final int emptyColumn, final boolean hilbertNumbering) {
         this.boardName = boardName;
         validateRowBounds(minimumColumnByRow, maximumColumnByRow);
         boardSize = minimumColumnByRow.length;
         bitByCoordinate = createCoordinateMap(minimumColumnByRow,
-                maximumColumnByRow, hilbertNumbering);
+                maximumColumnByRow);
         holeCount = countHoles();
         if (holeCount != expectedHoleCount) {
             throw new IllegalStateException(boardName + " board must contain "
@@ -138,8 +130,7 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
     }
 
     private int[][] createCoordinateMap(final int[] minimumColumnByRow,
-            final int[] maximumColumnByRow,
-            final boolean hilbertNumbering) {
+            final int[] maximumColumnByRow) {
         final int[][] map = new int[boardSize][boardSize];
         for (int[] row : map) {
             Arrays.fill(row, -1);
@@ -156,12 +147,10 @@ abstract class AbstractCrossBoard implements PegSolitaireBoard {
                 coordinates.add(new int[] { row, column });
             }
         }
-        if (hilbertNumbering) {
-            final int hilbertSide = hilbertSide();
-            coordinates.sort((first, second) -> Integer.compare(
-                    hilbertDistance(first[0], first[1], hilbertSide),
-                    hilbertDistance(second[0], second[1], hilbertSide)));
-        }
+        final int hilbertSide = hilbertSide();
+        coordinates.sort((first, second) -> Integer.compare(
+                hilbertDistance(first[0], first[1], hilbertSide),
+                hilbertDistance(second[0], second[1], hilbertSide)));
         for (int bit = 0; bit < coordinates.size(); bit++) {
             final int[] coordinate = coordinates.get(bit);
             map[coordinate[0]][coordinate[1]] = bit;

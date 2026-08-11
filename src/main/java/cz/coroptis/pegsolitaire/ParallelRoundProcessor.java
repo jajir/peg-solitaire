@@ -35,6 +35,9 @@ final class ParallelRoundProcessor {
     private final BoardSymmetry symmetry;
     private final int workerCount;
     private final int queueCapacity;
+    private final ThreadLocal<long[]> transformedParentByWorker =
+            ThreadLocal.withInitial(
+                    () -> new long[BoardSymmetry.TRANSFORM_COUNT]);
 
     ParallelRoundProcessor(final PegSolitaireBoard board,
             final BoardSymmetry symmetry, final int workerCount,
@@ -94,9 +97,11 @@ final class ParallelRoundProcessor {
 
     private int processBoard(final long state,
             final SegmentIndex<Long, NullValue> destination) {
+        final long[] transformedParent = transformedParentByWorker.get();
+        symmetry.transformAll(state, transformedParent);
         return board.generateSuccessors(state,
-                successor -> destination.put(symmetry.canonicalize(successor),
-                        NULL));
+                successor -> destination.put(symmetry.canonicalizeMove(
+                        transformedParent, state ^ successor), NULL));
     }
 
     private int waitForCompletedTask(

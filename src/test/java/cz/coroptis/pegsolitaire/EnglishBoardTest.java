@@ -23,9 +23,12 @@ class EnglishBoardTest {
     void englishBoardHasThirtyThreeHolesAndEmptyCenter() {
         assertEquals(33, EnglishBoard.HOLE_COUNT);
         assertEquals(32, Long.bitCount(EnglishBoard.INITIAL_STATE));
+        assertEquals(6, board.bitAt(3, 3));
         assertEquals(0L,
                 EnglishBoard.INITIAL_STATE & (1L << board.bitAt(3, 3)));
-        assertEquals(0x1fffeffffL, EnglishBoard.INITIAL_STATE);
+        assertEquals(0x1ffffffbfL, EnglishBoard.INITIAL_STATE);
+        assertEquals(0, board.bitAt(0, 2));
+        assertEquals(32, board.bitAt(0, 4));
     }
 
     @Test

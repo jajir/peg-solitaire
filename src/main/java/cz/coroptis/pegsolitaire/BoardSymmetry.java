@@ -5,7 +5,7 @@ package cz.coroptis.pegsolitaire;
  */
 public final class BoardSymmetry {
 
-    private static final int TRANSFORM_COUNT = 8;
+    static final int TRANSFORM_COUNT = 8;
 
     private final PegSolitaireBoard board;
     private final int boardMax;
@@ -41,28 +41,66 @@ public final class BoardSymmetry {
      * @return canonical state
      */
     public long canonicalize(final long state) {
-        if ((state & ~board.allPegs()) != 0L) {
-            throw new IllegalArgumentException("state contains bits outside the board");
-        }
+        validateBits(state, "state");
         long canonical = Long.MAX_VALUE;
         for (int transform = 0; transform < TRANSFORM_COUNT; transform++) {
-            canonical = Math.min(canonical, transform(state, transform));
+            canonical = Math.min(canonical,
+                    transformUnchecked(state, transform));
+        }
+        return canonical;
+    }
+
+    void transformAll(final long state, final long[] destination) {
+        validateBits(state, "state");
+        validateTransforms(destination);
+        for (int transform = 0; transform < TRANSFORM_COUNT; transform++) {
+            destination[transform] = transformUnchecked(state, transform);
+        }
+    }
+
+    long canonicalizeMove(final long[] transformedParent,
+            final long changedMask) {
+        validateTransforms(transformedParent);
+        validateBits(changedMask, "changedMask");
+        long canonical = Long.MAX_VALUE;
+        for (int transform = 0; transform < TRANSFORM_COUNT; transform++) {
+            canonical = Math.min(canonical, transformedParent[transform]
+                    ^ transformUnchecked(changedMask, transform));
         }
         return canonical;
     }
 
     long transform(final long state, final int transform) {
+        validateBits(state, "state");
         if (transform < 0 || transform >= TRANSFORM_COUNT) {
             throw new IllegalArgumentException("transform must be between 0 and 7");
         }
+        return transformUnchecked(state, transform);
+    }
+
+    private long transformUnchecked(final long state, final int transform) {
         long result = 0L;
-        for (int sourceBit = 0; sourceBit < board.holeCount();
-                sourceBit++) {
-            if ((state & (1L << sourceBit)) != 0L) {
-                result |= 1L << transformedBits[transform][sourceBit];
-            }
+        long remaining = state;
+        while (remaining != 0L) {
+            final int sourceBit = Long.numberOfTrailingZeros(remaining);
+            result |= 1L << transformedBits[transform][sourceBit];
+            remaining &= remaining - 1L;
         }
         return result;
+    }
+
+    private void validateBits(final long bits, final String name) {
+        if ((bits & ~board.allPegs()) != 0L) {
+            throw new IllegalArgumentException(
+                    name + " contains bits outside the board");
+        }
+    }
+
+    private static void validateTransforms(final long[] transforms) {
+        if (transforms == null || transforms.length != TRANSFORM_COUNT) {
+            throw new IllegalArgumentException(
+                    "transforms must contain exactly eight values");
+        }
     }
 
     private void mapTransforms(final PegSolitaireBoard board, final int row,

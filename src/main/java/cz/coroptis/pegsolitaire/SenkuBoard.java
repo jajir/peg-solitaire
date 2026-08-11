@@ -21,7 +21,7 @@ public final class SenkuBoard extends AbstractCrossBoard {
      */
     public SenkuBoard() {
         super("Senku", HOLE_COUNT, MINIMUM_COLUMN_BY_ROW,
-                MAXIMUM_COLUMN_BY_ROW, 4, 4, true);
+                MAXIMUM_COLUMN_BY_ROW, 4, 4);
         if (initialState() != INITIAL_STATE) {
             throw new IllegalStateException("Unexpected Senku board encoding");
         }

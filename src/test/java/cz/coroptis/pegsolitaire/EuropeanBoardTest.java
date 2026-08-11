@@ -25,9 +25,11 @@ class EuropeanBoardTest {
     void europeanBoardHasThirtySevenHolesAndEmptyCenter() {
         assertEquals(37, board.holeCount());
         assertEquals(36, Long.bitCount(board.initialState()));
-        assertEquals(18, board.bitAt(3, 3));
+        assertEquals(7, board.bitAt(3, 3));
         assertEquals(0L, board.initialState() & (1L << board.bitAt(3, 3)));
-        assertEquals(0x1ffffbffffL, board.initialState());
+        assertEquals(0x1fffffff7fL, board.initialState());
+        assertEquals(0, board.bitAt(1, 1));
+        assertEquals(36, board.bitAt(0, 4));
     }
 
     @Test

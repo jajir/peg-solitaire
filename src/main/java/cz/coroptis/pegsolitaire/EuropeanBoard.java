@@ -7,7 +7,7 @@ public final class EuropeanBoard extends AbstractCrossBoard {
 
     public static final int HOLE_COUNT = 37;
     public static final long ALL_PEGS = (1L << HOLE_COUNT) - 1L;
-    public static final long INITIAL_STATE = 0x1ffffbffffL;
+    public static final long INITIAL_STATE = 0x1fffffff7fL;
 
     private static final int[] MINIMUM_COLUMN_BY_ROW = { 2, 1, 0, 0, 0, 1, 2 };
     private static final int[] MAXIMUM_COLUMN_BY_ROW = { 4, 5, 6, 6, 6, 5, 4 };
