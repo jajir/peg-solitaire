@@ -23,8 +23,7 @@ public final class HestiaRoundStore {
     private static final int READ_CACHE_KEY_LIMIT = 5_000;
     private static final int READ_CHUNK_PAGE_LIMIT = 5;
     private static final int WRITE_CACHED_SEGMENT_LIMIT = 24;
-    private static final int WRITE_DELTA_CACHE_FILE_LIMIT = 4;
-    private static final int WRITE_INDEX_BUFFERED_KEY_LIMIT = 8_000_000;
+    private static final int WRITE_DELTA_CACHE_FILE_LIMIT = 100;
     private static final int WRITE_MAINTENANCE_CACHE_KEY_LIMIT = 2_000_000;
     private static final int WRITE_SEGMENT_CACHE_KEY_LIMIT = 2_000_000;
     private static final int WRITE_SEGMENT_MAX_KEYS = 30_000_000;
@@ -82,8 +81,6 @@ public final class HestiaRoundStore {
                                 WRITE_SEGMENT_WRITE_CACHE_KEY_LIMIT)//
                         .maintenanceWriteCacheKeyLimit(
                                 WRITE_MAINTENANCE_CACHE_KEY_LIMIT)//
-                        .indexBufferedWriteKeyLimit(
-                                WRITE_INDEX_BUFFERED_KEY_LIMIT)//
                         .segmentSplitKeyThreshold(WRITE_SEGMENT_MAX_KEYS))//
                 .bloomFilter(bloomFilter -> bloomFilter//
                         .indexSizeBytes(0)//

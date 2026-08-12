@@ -35,9 +35,6 @@ class HestiaRoundStoreTest {
             assertEquals(2_000_000,
                     index.runtimeTuning().current().writePath()
                             .segmentWriteCacheKeyLimitDuringMaintenance());
-            assertEquals(8_000_000,
-                    index.runtimeTuning().current().writePath()
-                            .indexBufferedWriteKeyLimit());
             assertEquals(0, index.runtimeTuning().current().chunkStoreCache()
                     .pageLimit());
             assertTrue(index.startupMemoryEstimate().isComplete());
