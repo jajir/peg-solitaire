@@ -43,7 +43,7 @@ public final class HestiaRoundStore {
                 .builder(new FsDirectory(asFile(directory)),
                         new TypeDescriptorLong(), new TypeDescriptorNull(),
                         functions)
-                .shardHashFunction(key -> key.hashCode()) //
+                .shardHashFunction(HestiaRoundStore::shardHash) //
                 .shardCount(SHARD_COUNT) //
                 .maxInMemoryEntries(MAX_IN_MEMORY_ENTRIES) //
                 .maxKeysPerPage(MAX_KEYS_PER_PAGE) //
@@ -65,6 +65,24 @@ public final class HestiaRoundStore {
         return SenkuIndex.open(new FsDirectory(asFile(directory)),
                 new TypeDescriptorLong(), new TypeDescriptorNull(),
                 DISK_BUFFER_SIZE_BYTES);
+    }
+
+    /**
+     * Mixes all board-state bits before Senku selects a shard. Canonical peg
+     * states have strongly biased low bits, so {@link Long#hashCode()} produces
+     * severely uneven power-of-two shard distributions.
+     *
+     * @param value encoded board state
+     * @return mixed 32-bit shard hash
+     */
+    static int shardHash(final long value) {
+        long mixed = value;
+        mixed ^= mixed >>> 33;
+        mixed *= 0xff51afd7ed558ccdL;
+        mixed ^= mixed >>> 33;
+        mixed *= 0xc4ceb9fe1a85ec53L;
+        mixed ^= mixed >>> 33;
+        return (int) (mixed ^ mixed >>> 32);
     }
 
     private File asFile(final Path directory) {

@@ -18,6 +18,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 class HestiaRoundStoreTest {
 
+    private static final int SHARD_COUNT = 128;
+
     @TempDir
     private Path temporaryDirectory;
 
@@ -44,5 +46,29 @@ class HestiaRoundStoreTest {
             assertEquals(List.of(7L, 12L),
                     entries.map(Entry::getKey).toList());
         }
+    }
+
+    @Test
+    void shardHashMixesBiasedBoardBitsEvenly() {
+        final int[] shardSizes = new int[SHARD_COUNT];
+        for (long highBits = 0; highBits < 1_000_000L; highBits++) {
+            final long boardState = highBits << 7;
+            final int shard = Math.floorMod(
+                    HestiaRoundStore.shardHash(boardState), SHARD_COUNT);
+            shardSizes[shard]++;
+        }
+
+        int minimum = Integer.MAX_VALUE;
+        int maximum = Integer.MIN_VALUE;
+        for (final int shardSize : shardSizes) {
+            minimum = Math.min(minimum, shardSize);
+            maximum = Math.max(maximum, shardSize);
+        }
+
+        final int observedMinimum = minimum;
+        final int observedMaximum = maximum;
+        assertTrue(observedMaximum < observedMinimum * 1.1,
+                () -> "Uneven mixed shard sizes: min=" + observedMinimum
+                        + ", max=" + observedMaximum);
     }
 }
