@@ -26,7 +26,7 @@ java \
     -jar "${APP_JAR}" \
     count \
     --board european \
-    --directory /Volumes/ponrava/peg-solitaire-european-center \
+    --directory /Volumes/ponrava/peg-solitaire-senku-index/european-center \
     --workers 8 \
     --queue-capacity 32
 

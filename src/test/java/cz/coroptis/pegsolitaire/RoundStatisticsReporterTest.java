@@ -11,7 +11,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 import org.hestiastore.index.datatype.NullValue;
-import org.hestiastore.index.segmentindex.SegmentIndex;
+import org.hestiastore.index.senku.SenkuReady;
+import org.hestiastore.index.senku.SenkuWriting;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -64,10 +65,11 @@ class RoundStatisticsReporterTest {
         final Path roundDirectory = temporaryDirectory
                 .resolve(Integer.toString(round));
         Files.createDirectory(roundDirectory);
-        try (SegmentIndex<Long, NullValue> index = new HestiaRoundStore()
-                .create(roundDirectory)) {
-            states.forEach(state -> index.put(state, NULL));
-            index.maintenance().compactAndWait();
+        final SenkuWriting<Long, NullValue> writing = new HestiaRoundStore()
+                .create(roundDirectory);
+        states.forEach(state -> writing.put(state, NULL));
+        try (SenkuReady<Long, NullValue> ignored = writing.finishWriting()) {
+            // Finalization publishes the test round.
         }
     }
 

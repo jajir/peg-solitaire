@@ -8,7 +8,7 @@ import java.util.stream.Stream;
 
 import org.hestiastore.index.Entry;
 import org.hestiastore.index.datatype.NullValue;
-import org.hestiastore.index.segmentindex.SegmentIndex;
+import org.hestiastore.index.senku.SenkuReady;
 
 /**
  * Scans completed round indexes and prints exact board counts.
@@ -57,9 +57,9 @@ public final class RoundStatisticsReporter {
     }
 
     private long countBoards(final int round) {
-        try (SegmentIndex<Long, NullValue> index = store
+        try (SenkuReady<Long, NullValue> index = store
                 .open(directories.completed(round));
-                Stream<Entry<Long, NullValue>> entries = index.getStream()) {
+                Stream<Entry<Long, NullValue>> entries = index.openStream()) {
             return entries.count();
         }
     }

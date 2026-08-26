@@ -21,6 +21,6 @@ cd "${PROJECT_DIR}"
 java -Xmx18g -jar "${APP_JAR}" \
     stats \
     --board european \
-    --directory /Volumes/ponrava/peg-solitaire-european-center
+    --directory /Volumes/ponrava/peg-solitaire-senku-index/european-center
 
 printf '\a'

@@ -21,7 +21,7 @@ cd "${PROJECT_DIR}"
 java -Xmx10g -jar "${APP_JAR}" \
     count \
     --board senku \
-    --directory /Volumes/ponrava/peg-solitaire-senku-center \
+    --directory /Volumes/ponrava/senku-hestia \
     --workers 8 \
     --queue-capacity 32
 

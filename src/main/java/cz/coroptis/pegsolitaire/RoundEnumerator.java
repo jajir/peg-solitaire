@@ -11,7 +11,8 @@ import java.util.stream.Stream;
 
 import org.hestiastore.index.Entry;
 import org.hestiastore.index.datatype.NullValue;
-import org.hestiastore.index.segmentindex.SegmentIndex;
+import org.hestiastore.index.senku.SenkuReady;
+import org.hestiastore.index.senku.SenkuWriting;
 
 /**
  * Initializes the search and advances one persisted breadth-first round.
@@ -98,10 +99,11 @@ public final class RoundEnumerator {
         directories.deleteInProgress(round);
         final Path temporary = directories.inProgress(round);
         Files.createDirectory(temporary);
-        try (SegmentIndex<Long, NullValue> index = store.create(temporary)) {
-            final long initial = symmetry.canonicalize(board.initialState());
-            index.put(initial, NULL);
-            index.maintenance().compactAndWait();
+        final SenkuWriting<Long, NullValue> writing = store.create(temporary);
+        final long initial = symmetry.canonicalize(board.initialState());
+        writing.put(initial, NULL);
+        try (SenkuReady<Long, NullValue> ignored = writing.finishWriting()) {
+            // Finalization publishes the immutable round index.
         }
         directories.publish(round);
         return RoundResult.initialized();
@@ -109,8 +111,8 @@ public final class RoundEnumerator {
 
     private RoundResult advance(final int sourceRound) throws IOException {
         final Path sourcePath = directories.completed(sourceRound);
-        try (SegmentIndex<Long, NullValue> source = store.open(sourcePath);
-                Stream<Entry<Long, NullValue>> entries = source.getStream()) {
+        try (SenkuReady<Long, NullValue> source = store.open(sourcePath);
+                Stream<Entry<Long, NullValue>> entries = source.openStream()) {
             final Iterator<Entry<Long, NullValue>> iterator = entries.iterator();
             if (!iterator.hasNext()) {
                 return RoundResult.terminal(sourceRound);
@@ -131,13 +133,12 @@ public final class RoundEnumerator {
 
         final ParallelRoundProcessor.ProcessingResult processingResult;
         long uniqueStates;
-        try (SegmentIndex<Long, NullValue> destination = store.create(temporary)) {
-            processingResult = new ParallelRoundProcessor(board, symmetry,
-                    workerCount, queueCapacity).process(iterator, destination);
-            destination.maintenance().compactAndWait();
-            try (Stream<Entry<Long, NullValue>> output = destination.getStream()) {
-                uniqueStates = output.count();
-            }
+        final SenkuWriting<Long, NullValue> destination = store.create(temporary);
+        processingResult = new ParallelRoundProcessor(board, symmetry,
+                workerCount, queueCapacity).process(iterator, destination);
+        try (SenkuReady<Long, NullValue> ready = destination.finishWriting();
+                Stream<Entry<Long, NullValue>> output = ready.openStream()) {
+            uniqueStates = output.count();
         }
         directories.publish(destinationRound);
         return RoundResult.counted(sourceRound,

@@ -21,7 +21,7 @@ cd "${PROJECT_DIR}"
 java -Xmx10g -jar "${APP_JAR}" \
     count \
     --board english \
-    --directory /Volumes/ponrava/peg-solitaire \
+    --directory /Volumes/ponrava/peg-solitaire-senku-index/english-center \
     --workers 8 \
     --queue-capacity 32
 

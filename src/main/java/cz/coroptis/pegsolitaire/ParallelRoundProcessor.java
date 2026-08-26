@@ -18,7 +18,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.hestiastore.index.Entry;
 import org.hestiastore.index.datatype.NullValue;
-import org.hestiastore.index.segmentindex.SegmentIndex;
+import org.hestiastore.index.senku.SenkuWriting;
 
 /**
  * Reads source entries on its caller thread and processes one board per worker
@@ -50,7 +50,7 @@ final class ParallelRoundProcessor {
 
     ProcessingResult process(
             final Iterator<Entry<Long, NullValue>> sourceEntries,
-            final SegmentIndex<Long, NullValue> destination) {
+            final SenkuWriting<Long, NullValue> destination) {
         final ThreadPoolExecutor executor = createExecutor();
         final ExecutorCompletionService<Integer> completions =
                 new ExecutorCompletionService<>(executor);
@@ -96,7 +96,7 @@ final class ParallelRoundProcessor {
     }
 
     private int processBoard(final long state,
-            final SegmentIndex<Long, NullValue> destination) {
+            final SenkuWriting<Long, NullValue> destination) {
         final long[] transformedParent = transformedParentByWorker.get();
         symmetry.transformAll(state, transformedParent);
         return board.generateSuccessors(state,

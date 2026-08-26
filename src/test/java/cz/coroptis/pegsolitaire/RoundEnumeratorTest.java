@@ -12,7 +12,8 @@ import java.util.stream.Stream;
 
 import org.hestiastore.index.Entry;
 import org.hestiastore.index.datatype.NullValue;
-import org.hestiastore.index.segmentindex.SegmentIndex;
+import org.hestiastore.index.senku.SenkuReady;
+import org.hestiastore.index.senku.SenkuWriting;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -151,18 +152,19 @@ class RoundEnumeratorTest {
             throws Exception {
         final Path path = temporaryDirectory.resolve(Integer.toString(round));
         Files.createDirectory(path);
-        try (SegmentIndex<Long, NullValue> index = new HestiaRoundStore()
-                .create(path)) {
-            states.forEach(state -> index.put(state, NULL));
-            index.maintenance().compactAndWait();
+        final SenkuWriting<Long, NullValue> writing = new HestiaRoundStore()
+                .create(path);
+        states.forEach(state -> writing.put(state, NULL));
+        try (SenkuReady<Long, NullValue> ignored = writing.finishWriting()) {
+            // Finalization publishes the test round.
         }
     }
 
     private List<Long> keys(final int round) throws Exception {
-        try (SegmentIndex<Long, NullValue> index = new HestiaRoundStore()
+        try (SenkuReady<Long, NullValue> index = new HestiaRoundStore()
                 .open(temporaryDirectory.resolve(Integer.toString(round)));
-                Stream<Entry<Long, NullValue>> entries = index.getStream()) {
-            return entries.map(Entry::getKey).sorted().toList();
+                Stream<Entry<Long, NullValue>> entries = index.openStream()) {
+            return entries.map(Entry::getKey).toList();
         }
     }
 }

@@ -1,125 +1,70 @@
 package cz.coroptis.pegsolitaire;
 
+import static org.hestiastore.index.datatype.NullValue.NULL;
+
 import java.io.File;
 import java.nio.file.Path;
 
 import org.hestiastore.index.datatype.NullValue;
+import org.hestiastore.index.datatype.TypeDescriptorLong;
+import org.hestiastore.index.datatype.TypeDescriptorNull;
 import org.hestiastore.index.directory.FsDirectory;
-import org.hestiastore.index.segmentindex.SegmentIndex;
-import org.hestiastore.index.segmentindex.configuration.api.IndexConfiguration;
-import org.hestiastore.index.segmentindex.configuration.tuning.RuntimeTuningPatch;
-import org.hestiastore.index.segmentindex.configuration.tuning.RuntimeTuningResult;
+import org.hestiastore.index.senku.SenkuIndex;
+import org.hestiastore.index.senku.SenkuMergeFunctionRegistry;
+import org.hestiastore.index.senku.SenkuReady;
+import org.hestiastore.index.senku.SenkuWriting;
 
 /**
- * Creates and opens the Hestia indexes used for round frontiers.
+ * Creates and opens the Senku indexes used for round frontiers.
  */
 public final class HestiaRoundStore {
 
-    private static final int CHUNK_KEY_LIMIT = 30_000;
-    private static final int DISK_BUFFER_SIZE_BYTES = 1024 * 64;
-    private static final String INDEX_NAME = "peg-solitaire-round";
-    private static final String READ_INDEX_NAME = INDEX_NAME + "-reader";
-    private static final int READ_CACHED_SEGMENT_LIMIT = 3;
-    private static final int READ_CACHE_KEY_LIMIT = 5_000;
-    private static final int READ_CHUNK_PAGE_LIMIT = 5;
-    private static final int WRITE_CACHED_SEGMENT_LIMIT = 24;
-    private static final int WRITE_DELTA_CACHE_FILE_LIMIT = 100;
-    private static final int WRITE_MAINTENANCE_CACHE_KEY_LIMIT = 2_000_000;
-    private static final int WRITE_SEGMENT_CACHE_KEY_LIMIT = 2_000_000;
-    private static final int WRITE_SEGMENT_MAX_KEYS = 30_000_000;
-    private static final int WRITE_SEGMENT_WRITE_CACHE_KEY_LIMIT = 1_000_000;
+    private static final int DISK_BUFFER_SIZE_BYTES = 8_192;
+    private static final int MAINTENANCE_THREADS = 8;
+    private static final int MAX_IN_MEMORY_ENTRIES = 10_000_000;
+    private static final long MAX_ENTRIES_PER_PART = 10_000_000L;
+    private static final int MAX_KEYS_PER_PAGE = 1_000_000;
+    private static final int MERGE_FAN_IN = 64;
+    private static final int SHARD_COUNT = 128;
+    private static final int MAINTENANCE_QUEUE_SIZE = SHARD_COUNT
+            - MAINTENANCE_THREADS;
 
     /**
-     * Creates an empty round index.
+     * Creates an empty writable round index.
      *
      * @param directory target index directory
-     * @return opened new index
+     * @return new write-only index handle
      */
-    public SegmentIndex<Long, NullValue> create(final Path directory) {
-        return SegmentIndex.create(new FsDirectory(asFile(directory)),
-                writeConfiguration());
+    public SenkuWriting<Long, NullValue> create(final Path directory) {
+        final SenkuMergeFunctionRegistry<Long, NullValue> functions =
+                new SenkuMergeFunctionRegistry<>();
+        functions.register((key, first, second) -> NULL);
+        return SenkuIndex
+                .builder(new FsDirectory(asFile(directory)),
+                        new TypeDescriptorLong(), new TypeDescriptorNull(),
+                        functions)
+                .shardHashFunction(key -> key.hashCode()) //
+                .shardCount(SHARD_COUNT) //
+                .maxInMemoryEntries(MAX_IN_MEMORY_ENTRIES) //
+                .maxKeysPerPage(MAX_KEYS_PER_PAGE) //
+                .mergeFanIn(MERGE_FAN_IN) //
+                .maintenanceThreads(MAINTENANCE_THREADS) //
+                .maintenanceQueueSize(MAINTENANCE_QUEUE_SIZE) //
+                .diskIoBufferSize(DISK_BUFFER_SIZE_BYTES) //
+                .maxEntriesPerPart(MAX_ENTRIES_PER_PART) //
+                .create();
     }
 
     /**
-     * Opens a completed round index.
+     * Opens a completed round index for streaming.
      *
-     * @param directory existing index directory
-     * @return opened index
+     * @param directory existing ready index directory
+     * @return exclusive read-only index handle
      */
-    public SegmentIndex<Long, NullValue> open(final Path directory) {
-        final SegmentIndex<Long, NullValue> index = SegmentIndex.open(
-                new FsDirectory(asFile(directory)), readConfiguration());
-        final RuntimeTuningResult result = index.runtimeTuning()
-                .apply(RuntimeTuningPatch.builder()
-                        .cachedSegmentLimit(READ_CACHED_SEGMENT_LIMIT)
-                        .cacheKeyLimit(CHUNK_KEY_LIMIT)
-                        .chunkStoreCachePageLimit(READ_CHUNK_PAGE_LIMIT)
-                        .build());
-        if (!result.applied()) {
-            index.close();
-            throw new IllegalStateException(
-                    "Unable to apply the Hestia read-index profile: "
-                            + result.validation().issues());
-        }
-        return index;
-    }
-
-    private IndexConfiguration<Long, NullValue> writeConfiguration() {
-        return IndexConfiguration.<Long, NullValue>builder()//
-                .identity(identity -> identity.keyClass(Long.class))//
-                .identity(identity -> identity.valueClass(NullValue.class))//
-                .identity(identity -> identity.name(INDEX_NAME))//
-                .wal(wal -> wal.disabled())//
-                .segment(segment -> segment//
-                        .cacheKeyLimit(WRITE_SEGMENT_CACHE_KEY_LIMIT)//
-                        .chunkKeyLimit(CHUNK_KEY_LIMIT)//
-                        .maxKeys(WRITE_SEGMENT_MAX_KEYS)//
-                        .cachedSegmentLimit(WRITE_CACHED_SEGMENT_LIMIT)//
-                        .deltaCacheFileLimit(WRITE_DELTA_CACHE_FILE_LIMIT))//
-                .writePath(writePath -> writePath//
-                        .segmentWriteCacheKeyLimit(
-                                WRITE_SEGMENT_WRITE_CACHE_KEY_LIMIT)//
-                        .maintenanceWriteCacheKeyLimit(
-                                WRITE_MAINTENANCE_CACHE_KEY_LIMIT)//
-                        .segmentSplitKeyThreshold(WRITE_SEGMENT_MAX_KEYS))//
-                .bloomFilter(bloomFilter -> bloomFilter//
-                        .indexSizeBytes(0)//
-                        .hashFunctions(3))//
-                .maintenance(maintenance -> maintenance// 
-                        .indexThreads(10)//
-                        .busyBackoffMillis(5)//
-                        .busyTimeoutMillis(900_000)//
-                        .backgroundAutoEnabled(true)//
-                        .registryLifecycleThreads(4))//
-                .io(io -> io//
-                        .diskBufferSizeBytes(DISK_BUFFER_SIZE_BYTES))//
-                .logging(logging -> logging//
-                        .contextEnabled(Boolean.FALSE))//
-                .chunkStoreCache(chunkCache -> chunkCache//
-                        .pageLimit(0))//
-                .build();
-    }
-
-    private IndexConfiguration<Long, NullValue> readConfiguration() {
-        return IndexConfiguration.<Long, NullValue>builder()//
-                .identity(identity -> identity.keyClass(Long.class))//
-                .identity(identity -> identity.valueClass(NullValue.class))//
-                .identity(identity -> identity.name(READ_INDEX_NAME))//
-                .segment(segment -> segment//
-                        .cacheKeyLimit(READ_CACHE_KEY_LIMIT))//
-                .maintenance(maintenance -> maintenance//
-                        .indexThreads(1)//
-                        .busyBackoffMillis(5)//
-                        .busyTimeoutMillis(900_000)//
-                        .backgroundAutoEnabled(false)//
-                        .registryLifecycleThreads(1))//
-                .io(io -> io//
-                        .diskBufferSizeBytes(DISK_BUFFER_SIZE_BYTES))//
-                .logging(logging -> logging//
-                        .contextEnabled(Boolean.TRUE))//
-                .chunkStoreCache(chunkCache -> chunkCache//
-                        .pageLimit(READ_CHUNK_PAGE_LIMIT))//
-                .build();
+    public SenkuReady<Long, NullValue> open(final Path directory) {
+        return SenkuIndex.open(new FsDirectory(asFile(directory)),
+                new TypeDescriptorLong(), new TypeDescriptorNull(),
+                DISK_BUFFER_SIZE_BYTES);
     }
 
     private File asFile(final Path directory) {

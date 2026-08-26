@@ -11,7 +11,8 @@ import java.util.stream.Stream;
 
 import org.hestiastore.index.Entry;
 import org.hestiastore.index.datatype.NullValue;
-import org.hestiastore.index.segmentindex.SegmentIndex;
+import org.hestiastore.index.senku.SenkuReady;
+import org.hestiastore.index.senku.SenkuWriting;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -21,43 +22,27 @@ class HestiaRoundStoreTest {
     private Path temporaryDirectory;
 
     @Test
-    void longNullValueIndexSurvivesCompactionAndReopen() throws Exception {
+    void longNullValueIndexFinalizesAndReopens() throws Exception {
         final Path indexDirectory = temporaryDirectory.resolve("round");
         Files.createDirectory(indexDirectory);
         final HestiaRoundStore store = new HestiaRoundStore();
-        try (SegmentIndex<Long, NullValue> index = store.create(indexDirectory)) {
-            assertEquals(24, index.runtimeTuning().current().segment()
-                    .cachedSegmentLimit());
-            assertEquals(2_000_000, index.runtimeTuning().current().segment()
-                    .cacheKeyLimit());
-            assertEquals(1_000_000, index.runtimeTuning().current().writePath()
-                    .segmentWriteCacheKeyLimit());
-            assertEquals(2_000_000,
-                    index.runtimeTuning().current().writePath()
-                            .segmentWriteCacheKeyLimitDuringMaintenance());
-            assertEquals(0, index.runtimeTuning().current().chunkStoreCache()
-                    .pageLimit());
-            assertTrue(index.startupMemoryEstimate().isComplete());
-            assertTrue(index.startupMemoryEstimate().totalEstimatedBytes()
-                    .orElseThrow() < 6L * 1024L * 1024L * 1024L);
-            index.put(12L, NULL);
-            index.put(7L, NULL);
-            index.put(12L, NULL);
-            index.maintenance().compactAndWait();
-        }
-
-        try (SegmentIndex<Long, NullValue> index = store.open(indexDirectory);
-                Stream<Entry<Long, NullValue>> entries = index.getStream()) {
-            assertEquals("peg-solitaire-round-reader",
-                    index.runtimeMonitoring().snapshot().indexName());
-            assertEquals(3, index.runtimeTuning().current().segment()
-                    .cachedSegmentLimit());
-            assertEquals(30_000, index.runtimeTuning().current().segment()
-                    .cacheKeyLimit());
-            assertEquals(5, index.runtimeTuning().current().chunkStoreCache()
-                    .pageLimit());
+        final SenkuWriting<Long, NullValue> writing = store
+                .create(indexDirectory);
+        writing.put(12L, NULL);
+        writing.put(7L, NULL);
+        writing.put(12L, NULL);
+        try (SenkuReady<Long, NullValue> ready = writing.finishWriting();
+                Stream<Entry<Long, NullValue>> entries = ready.openStream()) {
             assertEquals(List.of(7L, 12L),
-                    entries.map(Entry::getKey).sorted().toList());
+                    entries.map(Entry::getKey).toList());
+        }
+        assertTrue(Files.isRegularFile(indexDirectory.resolve(
+                "ready.properties")));
+
+        try (SenkuReady<Long, NullValue> index = store.open(indexDirectory);
+                Stream<Entry<Long, NullValue>> entries = index.openStream()) {
+            assertEquals(List.of(7L, 12L),
+                    entries.map(Entry::getKey).toList());
         }
     }
 }
