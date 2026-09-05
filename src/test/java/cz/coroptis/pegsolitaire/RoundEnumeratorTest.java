@@ -3,8 +3,10 @@ package cz.coroptis.pegsolitaire;
 import static org.hestiastore.index.datatype.NullValue.NULL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -23,8 +25,10 @@ class RoundEnumeratorTest {
     private Path temporaryDirectory;
 
     @Test
-    void initializesThenAdvancesWithoutChangingCompletedRound() throws Exception {
-        final RoundEnumerator enumerator = new RoundEnumerator(temporaryDirectory);
+    void initializesThenAdvancesWithoutChangingCompletedRound()
+            throws Exception {
+        final RoundEnumerator enumerator = new RoundEnumerator(
+                temporaryDirectory);
 
         final RoundResult initialized = enumerator.runOneRound();
         assertTrue(initialized.isInitialized());
@@ -38,6 +42,14 @@ class RoundEnumeratorTest {
         assertEquals(1L, counted.uniqueStates());
         assertEquals(List.of(EnglishBoard.INITIAL_STATE), keys(1));
         assertEquals(1, keys(2).size());
+        assertEquals(1L,
+                RoundStateSampleFile
+                        .read(temporaryDirectory.resolve("1.state-sample"), 33)
+                        .orElseThrow().stateCount());
+        assertEquals(1L,
+                RoundStateSampleFile
+                        .read(temporaryDirectory.resolve("2.state-sample"), 33)
+                        .orElseThrow().stateCount());
     }
 
     @Test
@@ -54,7 +66,8 @@ class RoundEnumeratorTest {
 
     @Test
     void rebuildsStaleNextRoundDirectory() throws Exception {
-        final RoundEnumerator enumerator = new RoundEnumerator(temporaryDirectory);
+        final RoundEnumerator enumerator = new RoundEnumerator(
+                temporaryDirectory);
         enumerator.runOneRound();
         final Path stale = temporaryDirectory.resolve("2.in-progress");
         Files.createDirectories(stale.resolve("nested"));
@@ -85,7 +98,8 @@ class RoundEnumeratorTest {
     @Test
     void nonEmptyTerminalFrontierPublishesOneEmptyRound() throws Exception {
         createRound(1, List.of(1L));
-        final RoundEnumerator enumerator = new RoundEnumerator(temporaryDirectory);
+        final RoundEnumerator enumerator = new RoundEnumerator(
+                temporaryDirectory);
 
         final RoundResult counted = enumerator.runOneRound();
         final RoundResult terminal = enumerator.runOneRound();
@@ -99,7 +113,8 @@ class RoundEnumeratorTest {
 
     @Test
     void generatedKeysAreCanonical() throws Exception {
-        final RoundEnumerator enumerator = new RoundEnumerator(temporaryDirectory);
+        final RoundEnumerator enumerator = new RoundEnumerator(
+                temporaryDirectory);
         enumerator.runOneRound();
         enumerator.runOneRound();
         enumerator.runOneRound();
@@ -113,9 +128,9 @@ class RoundEnumeratorTest {
 
     @Test
     void parallelWorkersProduceExpectedPersistedFrontiers() throws Exception {
-        final RoundEnumerator enumerator = new RoundEnumerator(temporaryDirectory);
-        final long[] expectedUniqueStates = { 1L, 1L, 2L, 8L, 39L, 171L,
-                719L };
+        final RoundEnumerator enumerator = new RoundEnumerator(
+                temporaryDirectory);
+        final long[] expectedUniqueStates = { 1L, 1L, 2L, 8L, 39L, 171L, 719L };
 
         final RoundResult initialized = enumerator.runOneRound();
         assertEquals(expectedUniqueStates[0], initialized.uniqueStates());
@@ -131,8 +146,8 @@ class RoundEnumeratorTest {
 
     @Test
     void europeanVariantPersistsEuropeanFrontiers() throws Exception {
-        final RoundEnumerator enumerator = new RoundEnumerator(temporaryDirectory,
-                BoardVariant.EUROPEAN, 4, 16);
+        final RoundEnumerator enumerator = new RoundEnumerator(
+                temporaryDirectory, BoardVariant.EUROPEAN, 4, 16);
 
         enumerator.runOneRound();
         final RoundResult secondRound = enumerator.runOneRound();
@@ -142,6 +157,89 @@ class RoundEnumeratorTest {
         assertEquals(1L, secondRound.uniqueStates());
         assertEquals(3L, thirdRound.uniqueStates());
         assertEquals(3, keys(3).size());
+    }
+
+    @Test
+    void senkuSamplesSurviveNewEnumeratorForEveryRound() throws Exception {
+        final long[] expected = { 1L, 1L, 4L, 19L, 105L, 579L, 3097L };
+        for (int round = 1; round <= expected.length; round++) {
+            final RoundResult result = new RoundEnumerator(temporaryDirectory,
+                    BoardVariant.SENKU, 4, 16).runOneRound();
+            assertEquals(expected[round - 1], result.uniqueStates());
+            final RoundStateSample sample = RoundStateSampleFile
+                    .read(temporaryDirectory.resolve(round + ".state-sample"),
+                            49)
+                    .orElseThrow();
+            assertEquals(expected[round - 1], sample.stateCount());
+            assertEquals(keys(round).get(0).longValue(), sample.states()[0]);
+            final String format = Files.readString(
+                    temporaryDirectory.resolve(round + "/format.properties"));
+            assertTrue(format.contains("keyPageCodec=4"), format);
+        }
+    }
+
+    @Test
+    void advancesExistingDeltaSenkuRoundWithoutRewritingIt() throws Exception {
+        createRound(1, List.of(SenkuBoard.INITIAL_STATE));
+        final Path sourceFormat = temporaryDirectory
+                .resolve("1/format.properties");
+        final String original = Files.readString(sourceFormat);
+        assertTrue(original.contains("keyPageCodec=3"), original);
+        final RoundResult result = new RoundEnumerator(temporaryDirectory,
+                BoardVariant.SENKU, 2, 2).runOneRound();
+        assertEquals(1L, result.uniqueStates());
+        assertEquals(original, Files.readString(sourceFormat));
+        assertTrue(Files
+                .readString(temporaryDirectory.resolve("2/format.properties"))
+                .contains("keyPageCodec=4"));
+        assertEquals(List.of(SenkuBoard.INITIAL_STATE), keys(1));
+        assertEquals(1, keys(2).size());
+    }
+
+    @Test
+    void missingSourceSampleIsRebuiltWithoutChangingCompletedSource()
+            throws Exception {
+        createRound(1, List.of(EnglishBoard.INITIAL_STATE));
+
+        final RoundResult result = new RoundEnumerator(temporaryDirectory)
+                .runOneRound();
+
+        assertEquals(1L, result.uniqueStates());
+        assertFalse(Files.exists(temporaryDirectory.resolve("1.state-sample")));
+        assertEquals(List.of(EnglishBoard.INITIAL_STATE), keys(1));
+        assertEquals(1L,
+                RoundStateSampleFile
+                        .read(temporaryDirectory.resolve("2.state-sample"), 33)
+                        .orElseThrow().stateCount());
+    }
+
+    @Test
+    void corruptSourceSampleFailsBeforeCreatingDestination() throws Exception {
+        new RoundEnumerator(temporaryDirectory).runOneRound();
+        Files.writeString(temporaryDirectory.resolve("1.state-sample"),
+                "damaged");
+
+        assertThrows(IOException.class,
+                () -> new RoundEnumerator(temporaryDirectory).runOneRound());
+        assertFalse(Files.exists(temporaryDirectory.resolve("2.in-progress")));
+        assertFalse(Files.exists(temporaryDirectory.resolve("2")));
+        assertEquals(List.of(EnglishBoard.INITIAL_STATE), keys(1));
+    }
+
+    @Test
+    void orphanDestinationSampleIsReplacedWhenRetryPublishesRound()
+            throws Exception {
+        new RoundEnumerator(temporaryDirectory).runOneRound();
+        Files.writeString(temporaryDirectory.resolve("2.state-sample"),
+                "orphan");
+
+        new RoundEnumerator(temporaryDirectory).runOneRound();
+
+        assertEquals(1L,
+                RoundStateSampleFile
+                        .read(temporaryDirectory.resolve("2.state-sample"), 33)
+                        .orElseThrow().stateCount());
+        assertTrue(Files.isDirectory(temporaryDirectory.resolve("2")));
     }
 
     private void createEmptyRound(final int round) throws Exception {

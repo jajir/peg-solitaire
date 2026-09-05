@@ -2,6 +2,7 @@ package cz.coroptis.pegsolitaire;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -18,13 +19,16 @@ class RoundDirectoriesTest {
     private Path temporaryDirectory;
 
     @Test
-    void findsHighestNumericDirectoryAndIgnoresOtherEntries() throws IOException {
-        final RoundDirectories directories = new RoundDirectories(temporaryDirectory);
+    void findsHighestNumericDirectoryAndIgnoresOtherEntries()
+            throws IOException {
+        final RoundDirectories directories = new RoundDirectories(
+                temporaryDirectory);
         Files.createDirectories(temporaryDirectory.resolve("1"));
         Files.createDirectories(temporaryDirectory.resolve("7"));
         Files.createDirectories(temporaryDirectory.resolve("8.in-progress"));
         Files.createDirectories(temporaryDirectory.resolve("not-a-round"));
-        Files.createDirectories(temporaryDirectory.resolve("999999999999999999"));
+        Files.createDirectories(
+                temporaryDirectory.resolve("999999999999999999"));
         Files.writeString(temporaryDirectory.resolve("9"), "not a directory");
 
         assertEquals(7, directories.latestCompletedRound().orElseThrow());
@@ -33,7 +37,8 @@ class RoundDirectoriesTest {
 
     @Test
     void deletesOnlyRequestedInProgressDirectory() throws IOException {
-        final RoundDirectories directories = new RoundDirectories(temporaryDirectory);
+        final RoundDirectories directories = new RoundDirectories(
+                temporaryDirectory);
         final Path incomplete = directories.inProgress(2);
         Files.createDirectories(incomplete.resolve("nested"));
         Files.writeString(incomplete.resolve("nested/data"), "temporary");
@@ -47,12 +52,27 @@ class RoundDirectoriesTest {
 
     @Test
     void publishesTemporaryRound() throws IOException {
-        final RoundDirectories directories = new RoundDirectories(temporaryDirectory);
+        final RoundDirectories directories = new RoundDirectories(
+                temporaryDirectory);
         Files.createDirectories(directories.inProgress(3));
 
         directories.publish(3);
 
         assertTrue(Files.isDirectory(directories.completed(3)));
         assertFalse(Files.exists(directories.inProgress(3)));
+    }
+
+    @Test
+    void sampleLivesOutsideIndexAndDoesNotCountAsCompletedRound()
+            throws IOException {
+        final RoundDirectories directories = new RoundDirectories(
+                temporaryDirectory);
+        final Path sample = directories.stateSampleFile(3);
+        Files.writeString(sample, "sample");
+
+        assertEquals(temporaryDirectory.resolve("3.state-sample"), sample);
+        assertTrue(directories.completedRounds().isEmpty());
+        assertThrows(IllegalArgumentException.class,
+                () -> directories.stateSampleFile(0));
     }
 }

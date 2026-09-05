@@ -27,7 +27,8 @@ final class PegSolitaireCli {
     static CliConfiguration parse(final String[] arguments)
             throws ParseException {
         if (arguments == null || arguments.length == 0) {
-            throw new ParseException("Missing command: expected count or stats");
+            throw new ParseException(
+                    "Missing command: expected count or stats");
         }
         final CliConfiguration.Action action = parseAction(arguments[0]);
         final Options options = optionsFor(action);
@@ -60,18 +61,15 @@ final class PegSolitaireCli {
         if (arguments == null) {
             return false;
         }
-        return Arrays.stream(arguments)
-                .anyMatch(argument -> "--help".equals(argument)
-                        || "-h".equals(argument));
+        return Arrays.stream(arguments).anyMatch(
+                argument -> "--help".equals(argument) || "-h".equals(argument));
     }
 
     static void printHelp(final PrintWriter output) {
         final TextHelpAppendable helpOutput = new TextHelpAppendable(output);
         helpOutput.setMaxWidth(100);
         final HelpFormatter formatter = HelpFormatter.builder()
-                .setHelpAppendable(helpOutput)
-                .setShowSince(false)
-                .get();
+                .setHelpAppendable(helpOutput).setShowSince(false).get();
         output.println("Peg Solitaire Round Enumerator");
         output.println();
         try {
@@ -108,7 +106,7 @@ final class PegSolitaireCli {
                 .addOption(requiredOption("w", "workers", "number",
                         "number of board-processing worker threads"))
                 .addOption(requiredOption("q", "queue-capacity", "number",
-                        "maximum number of queued board tasks"));
+                        "maximum number of queued 4096-state batches"));
     }
 
     private static Options statsOptions() {

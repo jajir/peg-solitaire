@@ -4,7 +4,12 @@ import static org.hestiastore.index.datatype.NullValue.NULL;
 
 import java.io.File;
 import java.nio.file.Path;
+import java.util.Objects;
+import java.util.function.ToIntFunction;
 
+import org.hestiastore.index.chunkentryfile.KeyPageCodec;
+import org.hestiastore.index.chunkentryfile.KeyPageCodecs;
+import org.hestiastore.index.chunkstore.Compression;
 import org.hestiastore.index.datatype.NullValue;
 import org.hestiastore.index.datatype.TypeDescriptorLong;
 import org.hestiastore.index.datatype.TypeDescriptorNull;
@@ -25,7 +30,7 @@ public final class HestiaRoundStore {
     private static final long MAX_ENTRIES_PER_PART = 10_000_000L;
     private static final int MAX_KEYS_PER_PAGE = 1_000_000;
     private static final int MERGE_FAN_IN = 64;
-    private static final int SHARD_COUNT = 128;
+    private static final int SHARD_COUNT = RangeShardRouter.SHARD_COUNT;
     /** Number of active high-order bits kept together for prefix encoding. */
     private static final int SHARD_PREFIX_BITS = 25;
     private static final int MAINTENANCE_QUEUE_SIZE = SHARD_COUNT
@@ -54,20 +59,46 @@ public final class HestiaRoundStore {
     }
 
     /**
-     * Creates an empty writable round index.
+     * Creates an empty writable round index with legacy prefix-hash routing.
+     * The round enumerator uses forecast ranges instead, when a source sample
+     * is available.
      *
      * @param directory target index directory
      * @return new write-only index handle
      */
     public SenkuWriting<Long, NullValue> create(final Path directory) {
-        final SenkuMergeFunctionRegistry<Long, NullValue> functions =
-                new SenkuMergeFunctionRegistry<>();
+        return create(directory, this::shardHash,
+                KeyPageCodecs.longDeltaVarint());
+    }
+
+    /** Creates a round with immutable, source-forecast numeric shard ranges. */
+    SenkuWriting<Long, NullValue> create(final Path directory,
+            final RangeShardRouter router) {
+        return create(directory, router, KeyPageCodecs.longDeltaVarint());
+    }
+
+    /**
+     * Creates a round whose immutable key domain is persisted with the index.
+     */
+    SenkuWriting<Long, NullValue> create(final Path directory,
+            final RangeShardRouter router, final KeyPageCodec<Long> codec) {
+        return create(directory,
+                (ToIntFunction<Long>) Objects.requireNonNull(router, "router"),
+                Objects.requireNonNull(codec, "codec"));
+    }
+
+    private SenkuWriting<Long, NullValue> create(final Path directory,
+            final ToIntFunction<Long> shardHashFunction,
+            final KeyPageCodec<Long> codec) {
+        final SenkuMergeFunctionRegistry<Long, NullValue> functions = new SenkuMergeFunctionRegistry<>();
         functions.register((key, first, second) -> NULL);
         return SenkuIndex
                 .builder(new FsDirectory(asFile(directory)),
                         new TypeDescriptorLong(), new TypeDescriptorNull(),
                         functions)
-                .shardHashFunction(this::shardHash) //
+                .keyPageCodec(codec) //
+                .compression(Compression.zstd(3)) //
+                .shardHashFunction(shardHashFunction) //
                 .shardCount(SHARD_COUNT) //
                 .maxInMemoryEntries(MAX_IN_MEMORY_ENTRIES) //
                 .maxKeysPerPage(MAX_KEYS_PER_PAGE) //
@@ -94,8 +125,8 @@ public final class HestiaRoundStore {
     /**
      * Selects the significant state prefix and mixes it before Senku chooses a
      * shard. States with the same prefix always reach the same shard. Mixing
-     * the prefix avoids concentrating biased canonical board prefixes in only
-     * a few power-of-two shards.
+     * the prefix avoids concentrating biased canonical board prefixes in only a
+     * few power-of-two shards.
      *
      * @param value encoded board state
      * @return mixed 32-bit shard hash

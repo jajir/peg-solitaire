@@ -6,10 +6,12 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.stream.Stream;
 
 import org.hestiastore.index.Entry;
+import org.hestiastore.index.chunkentryfile.KeyPageCodec;
 import org.hestiastore.index.datatype.NullValue;
 import org.hestiastore.index.senku.SenkuReady;
 import org.hestiastore.index.senku.SenkuWriting;
@@ -25,6 +27,7 @@ public final class RoundEnumerator {
     private final PegSolitaireBoard board;
     private final BoardSymmetry symmetry;
     private final HestiaRoundStore store;
+    private final BoardStateEncoding encoding;
     private final RoundDirectories directories;
     private final int workerCount;
     private final int queueCapacity;
@@ -42,9 +45,9 @@ public final class RoundEnumerator {
     /**
      * Creates an enumerator with explicit parallel processing limits.
      *
-     * @param dataRoot persistent round root
-     * @param workerCount number of board-processing workers
-     * @param queueCapacity maximum queued board tasks
+     * @param dataRoot      persistent round root
+     * @param workerCount   number of board-processing workers
+     * @param queueCapacity maximum queued batches of board states
      */
     public RoundEnumerator(final Path dataRoot, final int workerCount,
             final int queueCapacity) {
@@ -52,21 +55,22 @@ public final class RoundEnumerator {
     }
 
     /**
-     * Creates an enumerator for an explicit board and parallel processing limits.
+     * Creates an enumerator for an explicit board and parallel processing
+     * limits.
      *
-     * @param dataRoot persistent round root
-     * @param boardVariant board implementation
-     * @param workerCount number of board-processing workers
-     * @param queueCapacity maximum queued board tasks
+     * @param dataRoot      persistent round root
+     * @param boardVariant  board implementation
+     * @param workerCount   number of board-processing workers
+     * @param queueCapacity maximum queued batches of board states
      */
-    public RoundEnumerator(final Path dataRoot,
-            final BoardVariant boardVariant, final int workerCount,
-            final int queueCapacity) {
+    public RoundEnumerator(final Path dataRoot, final BoardVariant boardVariant,
+            final int workerCount, final int queueCapacity) {
         if (workerCount < 1) {
             throw new IllegalArgumentException("workerCount must be positive");
         }
         if (queueCapacity < 1) {
-            throw new IllegalArgumentException("queueCapacity must be positive");
+            throw new IllegalArgumentException(
+                    "queueCapacity must be positive");
         }
         if (boardVariant == null) {
             throw new IllegalArgumentException("boardVariant must not be null");
@@ -74,6 +78,7 @@ public final class RoundEnumerator {
         board = boardVariant.createBoard();
         symmetry = new BoardSymmetry(board);
         store = new HestiaRoundStore(board.holeCount());
+        encoding = new BoardStateEncoding(board);
         directories = new RoundDirectories(dataRoot);
         this.workerCount = workerCount;
         this.queueCapacity = queueCapacity;
@@ -99,30 +104,52 @@ public final class RoundEnumerator {
         directories.deleteInProgress(round);
         final Path temporary = directories.inProgress(round);
         Files.createDirectory(temporary);
-        final SenkuWriting<Long, NullValue> writing = store.create(temporary);
         final long initial = symmetry.canonicalize(board.initialState());
+        final SortedStateSampler sampler = new SortedStateSampler(
+                board.holeCount());
+        sampler.add(initial);
+        final SenkuWriting<Long, NullValue> writing = store.create(temporary,
+                new RangeShardRouter(new long[0]),
+                encoding.codecForPopulation(Long.bitCount(initial)));
         writing.put(initial, NULL);
         try (SenkuReady<Long, NullValue> ignored = writing.finishWriting()) {
             // Finalization publishes the immutable round index.
         }
+        RoundStateSampleFile.write(directories.stateSampleFile(round),
+                sampler.snapshot());
         directories.publish(round);
         return RoundResult.initialized();
     }
 
     private RoundResult advance(final int sourceRound) throws IOException {
         final Path sourcePath = directories.completed(sourceRound);
-        try (SenkuReady<Long, NullValue> source = store.open(sourcePath);
-                Stream<Entry<Long, NullValue>> entries = source.openStream()) {
-            final Iterator<Entry<Long, NullValue>> iterator = entries.iterator();
-            if (!iterator.hasNext()) {
-                return RoundResult.terminal(sourceRound);
+        try (SenkuReady<Long, NullValue> source = store.open(sourcePath)) {
+            final Optional<RoundStateSample> persisted = RoundStateSampleFile
+                    .read(directories.stateSampleFile(sourceRound),
+                            board.holeCount());
+            // An index written before sampling was introduced needs one extra
+            // read-only pass. All subsequent rounds persist their own sample.
+            final RoundStateSample sample = persisted.isPresent()
+                    ? persisted.get()
+                    : sample(source);
+            final RangeShardRouter router = RangeShardRouter
+                    .fromSourceSample(sample, board, symmetry);
+            try (Stream<Entry<Long, NullValue>> entries = source.openStream()) {
+                final Iterator<Entry<Long, NullValue>> iterator = entries
+                        .iterator();
+                if (!iterator.hasNext()) {
+                    return RoundResult.terminal(sourceRound);
+                }
+                return generateRound(sourceRound, iterator, router,
+                        encoding.codecForSuccessors(sample));
             }
-            return generateRound(sourceRound, iterator);
         }
     }
 
     private RoundResult generateRound(final int sourceRound,
-            final Iterator<Entry<Long, NullValue>> iterator) throws IOException {
+            final Iterator<Entry<Long, NullValue>> iterator,
+            final RangeShardRouter router, final KeyPageCodec<Long> codec)
+            throws IOException {
         if (sourceRound == Integer.MAX_VALUE) {
             throw new IOException("Round number overflow");
         }
@@ -132,17 +159,28 @@ public final class RoundEnumerator {
         Files.createDirectory(temporary);
 
         final ParallelRoundProcessor.ProcessingResult processingResult;
-        long uniqueStates;
-        final SenkuWriting<Long, NullValue> destination = store.create(temporary);
+        final RoundStateSample sample;
+        final SenkuWriting<Long, NullValue> destination = store
+                .create(temporary, router, codec);
         processingResult = new ParallelRoundProcessor(board, symmetry,
                 workerCount, queueCapacity).process(iterator, destination);
-        try (SenkuReady<Long, NullValue> ready = destination.finishWriting();
-                Stream<Entry<Long, NullValue>> output = ready.openStream()) {
-            uniqueStates = output.count();
+        try (SenkuReady<Long, NullValue> ready = destination.finishWriting()) {
+            sample = sample(ready);
         }
+        RoundStateSampleFile
+                .write(directories.stateSampleFile(destinationRound), sample);
         directories.publish(destinationRound);
         return RoundResult.counted(sourceRound,
                 processingResult.processedStates(),
-                processingResult.generatedMoves(), uniqueStates);
+                processingResult.generatedMoves(), sample.stateCount());
+    }
+
+    private RoundStateSample sample(final SenkuReady<Long, NullValue> ready) {
+        final SortedStateSampler sampler = new SortedStateSampler(
+                board.holeCount());
+        try (Stream<Entry<Long, NullValue>> output = ready.openStream()) {
+            output.forEach(entry -> sampler.add(entry.getKey()));
+        }
+        return sampler.snapshot();
     }
 }

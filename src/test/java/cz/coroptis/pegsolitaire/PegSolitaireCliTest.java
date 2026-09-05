@@ -16,10 +16,10 @@ class PegSolitaireCliTest {
 
     @Test
     void parsesCountConfiguration() throws Exception {
-        final CliConfiguration configuration = PegSolitaireCli.parse(new String[] {
-                "count", "--board", "english", "--directory", "/tmp/rounds",
-                "--workers", "8", "--queue-capacity", "32"
-        });
+        final CliConfiguration configuration = PegSolitaireCli
+                .parse(new String[] { "count", "--board", "english",
+                        "--directory", "/tmp/rounds", "--workers", "8",
+                        "--queue-capacity", "32" });
 
         assertEquals(CliConfiguration.Action.COUNT, configuration.action());
         assertEquals(BoardVariant.ENGLISH, configuration.board());
@@ -30,9 +30,8 @@ class PegSolitaireCliTest {
 
     @Test
     void parsesStatsConfiguration() throws Exception {
-        final CliConfiguration configuration = PegSolitaireCli.parse(new String[] {
-                "stats", "-b", "english", "-d", "/tmp/rounds"
-        });
+        final CliConfiguration configuration = PegSolitaireCli.parse(
+                new String[] { "stats", "-b", "english", "-d", "/tmp/rounds" });
 
         assertEquals(CliConfiguration.Action.STATS, configuration.action());
         assertEquals(BoardVariant.ENGLISH, configuration.board());
@@ -41,10 +40,10 @@ class PegSolitaireCliTest {
 
     @Test
     void rejectsCountOptionsForStats() {
-        assertThrows(ParseException.class, () -> PegSolitaireCli.parse(new String[] {
-                "stats", "--board", "english", "--directory", "/tmp/rounds",
-                "--workers", "8"
-        }));
+        assertThrows(ParseException.class,
+                () -> PegSolitaireCli.parse(new String[] { "stats", "--board",
+                        "english", "--directory", "/tmp/rounds", "--workers",
+                        "8" }));
     }
 
     @Test
@@ -52,33 +51,31 @@ class PegSolitaireCliTest {
             throws Exception {
         final CliConfiguration european = PegSolitaireCli.parse(new String[] {
                 "count", "--board", "european", "--directory", "/tmp/rounds",
-                "--workers", "8", "--queue-capacity", "32"
-        });
+                "--workers", "8", "--queue-capacity", "32" });
         assertEquals(BoardVariant.EUROPEAN, european.board());
 
         final CliConfiguration senku = PegSolitaireCli.parse(new String[] {
-                "stats", "--board", "senku", "--directory", "/tmp/rounds"
-        });
+                "stats", "--board", "senku", "--directory", "/tmp/rounds" });
         assertEquals(BoardVariant.SENKU, senku.board());
 
-        assertThrows(ParseException.class, () -> PegSolitaireCli.parse(new String[] {
-                "count", "--board", "german", "--directory", "/tmp/rounds",
-                "--workers", "8", "--queue-capacity", "32"
-        }));
+        assertThrows(ParseException.class,
+                () -> PegSolitaireCli.parse(new String[] { "count", "--board",
+                        "german", "--directory", "/tmp/rounds", "--workers",
+                        "8", "--queue-capacity", "32" }));
         assertThrows(ParseException.class,
                 () -> PegSolitaireCli.parse(new String[] { "solve" }));
     }
 
     @Test
     void rejectsRelativeDirectoryAndInvalidParallelLimits() {
-        assertThrows(ParseException.class, () -> PegSolitaireCli.parse(new String[] {
-                "count", "--board", "english", "--directory", "rounds",
-                "--workers", "8", "--queue-capacity", "32"
-        }));
-        assertThrows(ParseException.class, () -> PegSolitaireCli.parse(new String[] {
-                "count", "--board", "english", "--directory", "/tmp/rounds",
-                "--workers", "0", "--queue-capacity", "32"
-        }));
+        assertThrows(ParseException.class,
+                () -> PegSolitaireCli.parse(new String[] { "count", "--board",
+                        "english", "--directory", "rounds", "--workers", "8",
+                        "--queue-capacity", "32" }));
+        assertThrows(ParseException.class,
+                () -> PegSolitaireCli.parse(new String[] { "count", "--board",
+                        "english", "--directory", "/tmp/rounds", "--workers",
+                        "0", "--queue-capacity", "32" }));
     }
 
     @Test
@@ -93,5 +90,6 @@ class PegSolitaireCliTest {
         assertTrue(help.contains("peg-solitaire count"));
         assertTrue(help.contains("peg-solitaire stats"));
         assertTrue(help.contains("--queue-capacity"));
+        assertTrue(help.contains("4096-state batches"));
     }
 }

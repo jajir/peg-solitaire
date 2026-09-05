@@ -67,11 +67,8 @@ public final class RoundDirectories {
             return entries.filter(Files::isDirectory)
                     .map(path -> path.getFileName().toString())
                     .filter(name -> ROUND_NAME.matcher(name).matches())
-                    .mapToInt(this::parseRound)
-                    .filter(round -> round > 0)
-                    .sorted()
-                    .boxed()
-                    .toList();
+                    .mapToInt(this::parseRound).filter(round -> round > 0)
+                    .sorted().boxed().toList();
         }
     }
 
@@ -83,6 +80,18 @@ public final class RoundDirectories {
     public Path inProgress(final int round) {
         validateRound(round);
         return root.resolve(round + IN_PROGRESS_SUFFIX);
+    }
+
+    /**
+     * Returns the application-owned quantile sample beside a completed index.
+     * Senku index directories themselves must contain only engine-owned files.
+     *
+     * @param round sampled round number
+     * @return sample sidecar path
+     */
+    public Path stateSampleFile(final int round) {
+        validateRound(round);
+        return root.resolve(round + ".state-sample");
     }
 
     /**
@@ -107,7 +116,8 @@ public final class RoundDirectories {
      * Atomically publishes an in-progress directory as a completed round.
      *
      * @param round output round number
-     * @throws IOException when publication fails or atomic moves are unsupported
+     * @throws IOException when publication fails or atomic moves are
+     *                     unsupported
      */
     public void publish(final int round) throws IOException {
         final Path source = inProgress(round);
@@ -118,7 +128,8 @@ public final class RoundDirectories {
         try {
             Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
         } catch (AtomicMoveNotSupportedException exception) {
-            throw new IOException("Filesystem does not support atomic round publication",
+            throw new IOException(
+                    "Filesystem does not support atomic round publication",
                     exception);
         }
     }
