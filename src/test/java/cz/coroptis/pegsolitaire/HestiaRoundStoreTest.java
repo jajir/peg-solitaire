@@ -2,6 +2,7 @@ package cz.coroptis.pegsolitaire;
 
 import static org.hestiastore.index.datatype.NullValue.NULL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -49,12 +50,14 @@ class HestiaRoundStoreTest {
     }
 
     @Test
-    void shardHashMixesBiasedBoardBitsEvenly() {
+    void shardHashMixesBoardPrefixesEvenly() {
+        final HestiaRoundStore store = new HestiaRoundStore(
+                SenkuBoard.HOLE_COUNT);
         final int[] shardSizes = new int[SHARD_COUNT];
-        for (long highBits = 0; highBits < 1_000_000L; highBits++) {
-            final long boardState = highBits << 7;
+        for (long prefix = 0; prefix < 1_000_000L; prefix++) {
+            final long boardState = prefix << 24;
             final int shard = Math.floorMod(
-                    HestiaRoundStore.shardHash(boardState), SHARD_COUNT);
+                    store.shardHash(boardState), SHARD_COUNT);
             shardSizes[shard]++;
         }
 
@@ -70,5 +73,24 @@ class HestiaRoundStoreTest {
         assertTrue(observedMaximum < observedMinimum * 1.1,
                 () -> "Uneven mixed shard sizes: min=" + observedMinimum
                         + ", max=" + observedMaximum);
+    }
+
+    @Test
+    void statesWithSameSignificantPrefixUseSameShard() {
+        final HestiaRoundStore store = new HestiaRoundStore(
+                SenkuBoard.HOLE_COUNT);
+        final long prefix = 0x123456L;
+        final long first = prefix << 24;
+        final long second = first | 0xffffffL;
+
+        assertEquals(store.shardHash(first), store.shardHash(second));
+    }
+
+    @Test
+    void stateBitCountMustFitInLong() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new HestiaRoundStore(0));
+        assertThrows(IllegalArgumentException.class,
+                () -> new HestiaRoundStore(65));
     }
 }

@@ -73,7 +73,7 @@ public final class RoundEnumerator {
         }
         board = boardVariant.createBoard();
         symmetry = new BoardSymmetry(board);
-        store = new HestiaRoundStore();
+        store = new HestiaRoundStore(board.holeCount());
         directories = new RoundDirectories(dataRoot);
         this.workerCount = workerCount;
         this.queueCapacity = queueCapacity;

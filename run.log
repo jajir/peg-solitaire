@@ -4011,3 +4011,5 @@ Workers: 8, queue capacity: 32
 11:15:04 INFO  cz.coroptis.pegsolitaire.ParallelRoundProcessor - Submitted 51289285221 states for processing
 11:16:08 INFO  cz.coroptis.pegsolitaire.ParallelRoundProcessor - Submitted 51308194434 states for processing
 11:17:14 INFO  cz.coroptis.pegsolitaire.ParallelRoundProcessor - Submitted 51322588200 states for processing
+Completed round 21 -> 22: processed=51328644589, generated moves=874335083751, unique states=88438796621, elapsed=PT89H8M25.074599416S
+

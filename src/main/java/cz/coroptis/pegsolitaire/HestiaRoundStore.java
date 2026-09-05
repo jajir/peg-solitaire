@@ -26,8 +26,32 @@ public final class HestiaRoundStore {
     private static final int MAX_KEYS_PER_PAGE = 1_000_000;
     private static final int MERGE_FAN_IN = 64;
     private static final int SHARD_COUNT = 128;
+    /** Number of active high-order bits kept together for prefix encoding. */
+    private static final int SHARD_PREFIX_BITS = 25;
     private static final int MAINTENANCE_QUEUE_SIZE = SHARD_COUNT
             - MAINTENANCE_THREADS;
+
+    private final int shardPrefixShift;
+
+    /**
+     * Creates a store for general 64-bit keys.
+     */
+    public HestiaRoundStore() {
+        this(Long.SIZE);
+    }
+
+    /**
+     * Creates a store whose shard routing uses the significant state bits.
+     *
+     * @param stateBitCount number of bits occupied by an encoded board state
+     */
+    public HestiaRoundStore(final int stateBitCount) {
+        if (stateBitCount < 1 || stateBitCount > Long.SIZE) {
+            throw new IllegalArgumentException(
+                    "stateBitCount must be between 1 and 64");
+        }
+        shardPrefixShift = Math.max(0, stateBitCount - SHARD_PREFIX_BITS);
+    }
 
     /**
      * Creates an empty writable round index.
@@ -43,7 +67,7 @@ public final class HestiaRoundStore {
                 .builder(new FsDirectory(asFile(directory)),
                         new TypeDescriptorLong(), new TypeDescriptorNull(),
                         functions)
-                .shardHashFunction(HestiaRoundStore::shardHash) //
+                .shardHashFunction(this::shardHash) //
                 .shardCount(SHARD_COUNT) //
                 .maxInMemoryEntries(MAX_IN_MEMORY_ENTRIES) //
                 .maxKeysPerPage(MAX_KEYS_PER_PAGE) //
@@ -68,15 +92,20 @@ public final class HestiaRoundStore {
     }
 
     /**
-     * Mixes all board-state bits before Senku selects a shard. Canonical peg
-     * states have strongly biased low bits, so {@link Long#hashCode()} produces
-     * severely uneven power-of-two shard distributions.
+     * Selects the significant state prefix and mixes it before Senku chooses a
+     * shard. States with the same prefix always reach the same shard. Mixing
+     * the prefix avoids concentrating biased canonical board prefixes in only
+     * a few power-of-two shards.
      *
      * @param value encoded board state
      * @return mixed 32-bit shard hash
      */
-    static int shardHash(final long value) {
-        long mixed = value;
+    int shardHash(final long value) {
+        return mixShardPrefix(value >>> shardPrefixShift);
+    }
+
+    private static int mixShardPrefix(final long prefix) {
+        long mixed = prefix;
         mixed ^= mixed >>> 33;
         mixed *= 0xff51afd7ed558ccdL;
         mixed ^= mixed >>> 33;
