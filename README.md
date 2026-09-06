@@ -72,14 +72,26 @@ distribution and places the range ID in only the bottom seven bits. Returning
 just a range ID would cause severe hash collisions.
 
 Each completed round saves a checksummed `N.state-sample` file beside its `N/`
-index directory. The sample is collected during the existing final counting
-pass, uses at most 32 KiB of key storage, and occupies at most 32,804 bytes on
-disk. It is atomically written before the round directory is published. A
-missing sample is rebuilt by one read-only scan of the completed source; a
-malformed sample is rejected with an error. The sample affects placement only,
-never which states are generated or retained. The source sample also selects
-the next round's fixed population and parity domain; stored keys are validated
-against that domain by the page writer.
+index directory, atomically before publishing the round. Exact counts come from
+validated terminal run manifests. Run writers collect at most 256 natural-key
+representatives while emitting deduplicated output; only selected ranked keys
+need decoding. Ready metadata combines the terminal distributions into at most
+4,096 representatives, avoiding a separate full-output counting/sampling scan.
+
+Version 2 sidecars contain approximate representative keys with positive
+weights summing to the exact state count, occupying at most 65,572 bytes.
+They are **not** exact global-ordinal samples and have no formal quantile-error
+guarantee. Forecast successors inherit and combine their parents' weights.
+Version 1 exact-stride sidecars remain readable. If a sidecar is missing, the
+ready summary is used; older indexes without summaries fall back to a full
+read-only scan. Malformed summaries are rejected. Sampling affects placement
+only, never which states are generated or retained; source representatives also
+select the next round's population and parity domain.
+
+For an explicit expensive count/order and page-integrity diagnostic, add
+`--verify-ready` to the `count` command. This restores a complete stream scan
+after each finalized output. Metadata counts alone do not audit duplicate keys
+across different shards or validate every stored data page.
 
 This routing change can read the new delta/Zstd indexes written with the
 previous prefix-hash router. It does **not** make old Snappy indexes readable.
@@ -88,3 +100,7 @@ the new router for subsequent rounds; `HestiaRoundStore.create(Path)` remains a
 prefix-hash fallback for callers that do not supply a source forecast.
 
 See [the measured results and reproducible benchmark](doc/range-sharding-results.md).
+
+See [the pipeline implementation and before/after results](doc/senku-pipeline-results.md)
+for primitive ingestion, encoded-rank maintenance, bounded page preparation,
+metadata-based counting, and their measured CPU/storage tradeoffs.

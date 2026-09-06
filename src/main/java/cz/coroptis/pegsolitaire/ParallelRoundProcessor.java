@@ -22,6 +22,7 @@ import org.apache.logging.log4j.Logger;
 import org.hestiastore.index.Entry;
 import org.hestiastore.index.datatype.NullValue;
 import org.hestiastore.index.senku.SenkuWriting;
+import org.hestiastore.index.senku.SenkuLongSetWriting;
 
 /**
  * Reads source entries on its caller thread and processes bounded primitive
@@ -294,7 +295,9 @@ final class ParallelRoundProcessor {
         private WorkerContext(final SenkuWriting<Long, NullValue> destination,
                 final int cacheCapacity) {
             cache = new ExactRecentStateCache(cacheCapacity);
-            submit = state -> destination.put(state, NULL);
+            submit = destination instanceof SenkuLongSetWriting
+                    ? ((SenkuLongSetWriting) destination)::putLong
+                    : state -> destination.put(state, NULL);
         }
 
         @Override

@@ -8,8 +8,7 @@ import java.nio.file.Path;
 final class CliConfiguration {
 
     enum Action {
-        COUNT,
-        STATS
+        COUNT, STATS
     }
 
     private final Action action;
@@ -17,15 +16,24 @@ final class CliConfiguration {
     private final Path directory;
     private final int workerCount;
     private final int queueCapacity;
+    private final boolean verifyReadySummary;
 
     CliConfiguration(final Action action, final BoardVariant board,
             final Path directory, final int workerCount,
             final int queueCapacity) {
+        this(action, board, directory, workerCount, queueCapacity, false);
+    }
+
+    /** Creates command settings including explicit full-ready verification. */
+    CliConfiguration(final Action action, final BoardVariant board,
+            final Path directory, final int workerCount,
+            final int queueCapacity, final boolean verifyReadySummary) {
         this.action = action;
         this.board = board;
         this.directory = directory;
         this.workerCount = workerCount;
         this.queueCapacity = queueCapacity;
+        this.verifyReadySummary = verifyReadySummary;
     }
 
     Action action() {
@@ -46,5 +54,9 @@ final class CliConfiguration {
 
     int queueCapacity() {
         return queueCapacity;
+    }
+
+    boolean verifyReadySummary() {
+        return verifyReadySummary;
     }
 }

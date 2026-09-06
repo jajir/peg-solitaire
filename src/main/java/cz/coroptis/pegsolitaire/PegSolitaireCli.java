@@ -54,7 +54,7 @@ final class PegSolitaireCli {
                 commandLine.getOptionValue("queue-capacity"), "queue-capacity",
                 MAX_QUEUE_CAPACITY);
         return new CliConfiguration(action, board, directory, workers,
-                queueCapacity);
+                queueCapacity, commandLine.hasOption("verify-ready"));
     }
 
     static boolean isHelpRequest(final String[] arguments) {
@@ -106,7 +106,10 @@ final class PegSolitaireCli {
                 .addOption(requiredOption("w", "workers", "number",
                         "number of board-processing worker threads"))
                 .addOption(requiredOption("q", "queue-capacity", "number",
-                        "maximum number of queued 4096-state batches"));
+                        "maximum number of queued 4096-state batches"))
+                .addOption(Option.builder().longOpt("verify-ready").desc(
+                        "diagnostic: fully scan each finalized output to verify count and order")
+                        .get());
     }
 
     private static Options statsOptions() {

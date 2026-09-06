@@ -4,6 +4,7 @@ import static org.hestiastore.index.datatype.NullValue.NULL;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -23,6 +24,7 @@ import org.hestiastore.index.senku.SenkuIndex;
 import org.hestiastore.index.senku.SenkuMergeFunctionRegistry;
 import org.hestiastore.index.senku.SenkuReady;
 import org.hestiastore.index.senku.SenkuWriting;
+import org.hestiastore.index.senku.SenkuLongSetWriting;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -40,6 +42,7 @@ class HestiaRoundStoreTest {
         final HestiaRoundStore store = new HestiaRoundStore();
         final SenkuWriting<Long, NullValue> writing = store
                 .create(indexDirectory);
+        assertInstanceOf(SenkuLongSetWriting.class, writing);
         writing.put(12L, NULL);
         writing.put(7L, NULL);
         writing.put(12L, NULL);
@@ -74,6 +77,7 @@ class HestiaRoundStoreTest {
                 new long[] { 10L, 1L << 48 });
         final SenkuWriting<Long, NullValue> writing = store.create(directory,
                 router);
+        assertInstanceOf(SenkuLongSetWriting.class, writing);
         final List<Long> expected = List.of(1L, 9L, 10L, 999L, 1L << 48,
                 (1L << 49) - 1);
         for (int index = expected.size() - 1; index >= 0; index--) {

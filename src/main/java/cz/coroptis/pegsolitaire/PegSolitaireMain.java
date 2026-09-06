@@ -61,17 +61,16 @@ public final class PegSolitaireMain {
     private static void count(final CliConfiguration configuration,
             final PrintStream output) throws Exception {
         final long started = System.nanoTime();
-        output.println("Peg solitaire board: "
-                + configuration.board().optionValue());
-        output.println("Peg solitaire data root: "
-                + configuration.directory());
+        output.println(
+                "Peg solitaire board: " + configuration.board().optionValue());
+        output.println("Peg solitaire data root: " + configuration.directory());
         output.printf("Workers: %d, queue capacity: %d%n",
                 configuration.workerCount(), configuration.queueCapacity());
         try {
             final RoundResult result = new RoundEnumerator(
                     configuration.directory(), configuration.board(),
-                    configuration.workerCount(), configuration.queueCapacity())
-                    .runOneRound();
+                    configuration.workerCount(), configuration.queueCapacity(),
+                    configuration.verifyReadySummary()).runOneRound();
             printResult(result, elapsed(started), output);
         } catch (Exception exception) {
             throw new IllegalStateException(
@@ -80,8 +79,8 @@ public final class PegSolitaireMain {
     }
 
     private static String commandName(final CliConfiguration configuration) {
-        return configuration.action() == CliConfiguration.Action.COUNT
-                ? "Count" : "Statistics";
+        return configuration.action() == CliConfiguration.Action.COUNT ? "Count"
+                : "Statistics";
     }
 
     private static void printResult(final RoundResult result,
@@ -92,8 +91,7 @@ public final class PegSolitaireMain {
             return;
         }
         if (result.isTerminal()) {
-            output.printf(
-                    "Round %d is empty; search is complete, elapsed=%s%n",
+            output.printf("Round %d is empty; search is complete, elapsed=%s%n",
                     result.sourceRound(), elapsed);
             return;
         }

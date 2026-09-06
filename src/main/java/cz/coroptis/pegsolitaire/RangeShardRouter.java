@@ -2,6 +2,11 @@ package cz.coroptis.pegsolitaire;
 
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.function.LongToIntFunction;
 import java.util.function.ToIntFunction;
 
 /**
@@ -10,7 +15,7 @@ import java.util.function.ToIntFunction;
  * because HestiaStore also uses this hash for mutation stripes and table
  * probes.
  */
-final class RangeShardRouter implements ToIntFunction<Long> {
+final class RangeShardRouter implements ToIntFunction<Long>, LongToIntFunction {
 
     static final int SHARD_COUNT = 128;
     private static final int SHARD_MASK = SHARD_COUNT - 1;
@@ -48,6 +53,9 @@ final class RangeShardRouter implements ToIntFunction<Long> {
             throw new IllegalArgumentException(
                     "Source sample belongs to a different board");
         }
+        if (source.isWeighted()) {
+            return fromWeightedSample(source, board, symmetry);
+        }
         final long[] states = source.states();
         // A board has at most four directed jumps originating at each hole.
         final long[] successors = new long[Math.multiplyExact(states.length,
@@ -81,6 +89,56 @@ final class RangeShardRouter implements ToIntFunction<Long> {
     @Override
     public int applyAsInt(final Long key) {
         return hash(key.longValue());
+    }
+
+    /** Routes a primitive key without boxing for primitive set ingestion. */
+    @Override
+    public int applyAsInt(final long key) {
+        return hash(key);
+    }
+
+    /**
+     * Forecasts move mass from approximate source representatives. Each child
+     * inherits its parent's weight; equal children combine weights. Floating
+     * point mass is deliberate: this is a routing heuristic, not a count, and
+     * avoids overflow when the exact frontier count is multiplied by moves.
+     */
+    private static RangeShardRouter fromWeightedSample(
+            final RoundStateSample source, final PegSolitaireBoard board,
+            final BoardSymmetry symmetry) {
+        final Map<Long, Double> successors = new TreeMap<>();
+        final long[] states = source.states();
+        final long[] weights = source.weights();
+        final long[] transformed = new long[BoardSymmetry.TRANSFORM_COUNT];
+        for (int index = 0; index < states.length; index++) {
+            final long key = states[index];
+            final double weight = weights[index];
+            symmetry.transformAll(key, transformed);
+            board.generateSuccessors(key,
+                    next -> successors.merge(
+                            symmetry.canonicalizeMove(transformed, key ^ next),
+                            weight, Double::sum));
+        }
+        final double total = successors.values().stream()
+                .mapToDouble(Double::doubleValue).sum();
+        final int desired = Math.min(SHARD_COUNT - 1,
+                Math.max(0, successors.size() - 1));
+        final List<Long> selected = new ArrayList<>(desired);
+        double cumulative = 0.0;
+        int quantile = 1;
+        for (final Map.Entry<Long, Double> successor : successors.entrySet()) {
+            if (quantile <= desired
+                    && cumulative >= total * quantile / (desired + 1)) {
+                selected.add(successor.getKey());
+                do {
+                    quantile++;
+                } while (quantile <= desired
+                        && cumulative >= total * quantile / (desired + 1));
+            }
+            cumulative += successor.getValue();
+        }
+        return new RangeShardRouter(
+                selected.stream().mapToLong(Long::longValue).toArray());
     }
 
     /** Mixes every key bit, reserving the low bits for its range. */

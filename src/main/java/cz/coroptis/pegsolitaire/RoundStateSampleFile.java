@@ -19,10 +19,11 @@ import java.util.zip.CRC32C;
 final class RoundStateSampleFile {
 
     private static final int MAGIC = 0x534b5153;
-    private static final int VERSION = 1;
+    private static final int ORDINAL_VERSION = 1;
+    private static final int WEIGHTED_VERSION = 2;
     private static final int FIXED_BYTES = 36;
     private static final int MAX_FILE_BYTES = FIXED_BYTES
-            + RoundStateSample.MAX_SAMPLES * Long.BYTES;
+            + RoundStateSample.MAX_SAMPLES * Long.BYTES * 2;
 
     private RoundStateSampleFile() {
     }
@@ -46,16 +47,21 @@ final class RoundStateSampleFile {
             throw new IOException("Round sample changed during read: " + file);
         }
         final ByteBuffer buffer = ByteBuffer.wrap(bytes);
-        if (buffer.getInt() != MAGIC || buffer.getInt() != VERSION) {
+        final int magic = buffer.getInt();
+        final int version = buffer.getInt();
+        if (magic != MAGIC || (version != ORDINAL_VERSION
+                && version != WEIGHTED_VERSION)) {
             throw new IOException("Unsupported round sample format: " + file);
         }
         final int bits = buffer.getInt();
         final long count = buffer.getLong();
         final long stride = buffer.getLong();
         final int sampleCount = buffer.getInt();
+        final boolean weighted = version == WEIGHTED_VERSION;
         if (bits != stateBitCount || sampleCount < 0
                 || sampleCount > RoundStateSample.MAX_SAMPLES
-                || bytes.length != FIXED_BYTES + sampleCount * Long.BYTES) {
+                || (weighted && stride != 0L) || bytes.length != FIXED_BYTES
+                        + sampleCount * Long.BYTES * (weighted ? 2 : 1)) {
             throw new IOException(
                     "Round sample has invalid board or count metadata: "
                             + file);
@@ -71,6 +77,14 @@ final class RoundStateSampleFile {
             states[index] = buffer.getLong();
         }
         try {
+            if (weighted) {
+                final long[] weights = new long[sampleCount];
+                for (int index = 0; index < sampleCount; index++) {
+                    weights[index] = buffer.getLong();
+                }
+                return Optional.of(RoundStateSample.fromWeighted(bits, count,
+                        states, weights));
+            }
             return Optional
                     .of(new RoundStateSample(bits, count, stride, states));
         } catch (IllegalArgumentException exception) {
@@ -82,13 +96,20 @@ final class RoundStateSampleFile {
     static void write(final Path file, final RoundStateSample sample)
             throws IOException {
         final long[] states = sample.states();
-        final ByteBuffer buffer = ByteBuffer
-                .allocate(FIXED_BYTES + states.length * Long.BYTES);
-        buffer.putInt(MAGIC).putInt(VERSION).putInt(sample.stateBitCount())
-                .putLong(sample.stateCount()).putLong(sample.stride())
-                .putInt(states.length);
+        final boolean weighted = sample.isWeighted();
+        final ByteBuffer buffer = ByteBuffer.allocate(
+                FIXED_BYTES + states.length * Long.BYTES * (weighted ? 2 : 1));
+        buffer.putInt(MAGIC)
+                .putInt(weighted ? WEIGHTED_VERSION : ORDINAL_VERSION)
+                .putInt(sample.stateBitCount()).putLong(sample.stateCount())
+                .putLong(sample.stride()).putInt(states.length);
         for (final long key : states) {
             buffer.putLong(key);
+        }
+        if (weighted) {
+            for (final long weight : sample.weights()) {
+                buffer.putLong(weight);
+            }
         }
         final CRC32C checksum = new CRC32C();
         checksum.update(buffer.array(), 0, buffer.position());

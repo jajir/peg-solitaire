@@ -21,6 +21,21 @@ import org.junit.jupiter.api.io.TempDir;
 
 class RoundEnumeratorTest {
 
+    @Test
+    void finalizedRoundsPersistWeightedSummariesAndExplicitVerificationStillWorks()
+            throws Exception {
+        final RoundEnumerator enumerator = new RoundEnumerator(
+                temporaryDirectory, BoardVariant.ENGLISH, 2, 4, true);
+        enumerator.runOneRound();
+        final RoundResult second = enumerator.runOneRound();
+        final RoundStateSample summary = RoundStateSampleFile
+                .read(temporaryDirectory.resolve("2.state-sample"), 33)
+                .orElseThrow();
+        assertTrue(summary.isWeighted());
+        assertEquals(second.uniqueStates(), summary.stateCount());
+        assertEquals(second.uniqueStates(), keys(2).size());
+    }
+
     @TempDir
     private Path temporaryDirectory;
 

@@ -31,9 +31,37 @@ import org.hestiastore.index.Entry;
 import org.hestiastore.index.datatype.NullValue;
 import org.hestiastore.index.senku.SenkuReady;
 import org.hestiastore.index.senku.SenkuWriting;
+import org.hestiastore.index.senku.SenkuLongSetWriting;
 import org.junit.jupiter.api.Test;
 
 class ParallelRoundProcessorTest {
+
+    @Test
+    void explicitlySelectedLongSetUsesPrimitivePutsWithoutTheBoxedBridge() {
+        final AtomicLong puts = new AtomicLong();
+        final SenkuLongSetWriting destination = new SenkuLongSetWriting() {
+            @Override
+            public void putLong(final long key) {
+                puts.incrementAndGet();
+            }
+
+            @Override
+            public void put(final Long key, final NullValue value) {
+                throw new AssertionError(
+                        "Primitive destination must not receive boxed puts");
+            }
+
+            @Override
+            public SenkuReady<Long, NullValue> finishWriting() {
+                throw new UnsupportedOperationException();
+            }
+        };
+        final ParallelRoundProcessor.ProcessingResult result = processor(2, 4,
+                0).process(repeatedInitialStates(9), destination);
+        assertEquals(36L, result.generatedMoves());
+        assertEquals(36L, result.submittedMoves());
+        assertEquals(36L, puts.get());
+    }
 
     @Test
     void countsAllFullAndPartialBatchesWithoutFiltering() {

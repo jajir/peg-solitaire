@@ -1,11 +1,9 @@
 package cz.coroptis.pegsolitaire;
 
-import static org.hestiastore.index.datatype.NullValue.NULL;
-
 import java.io.File;
 import java.nio.file.Path;
 import java.util.Objects;
-import java.util.function.ToIntFunction;
+import java.util.function.LongToIntFunction;
 
 import org.hestiastore.index.chunkentryfile.KeyPageCodec;
 import org.hestiastore.index.chunkentryfile.KeyPageCodecs;
@@ -16,6 +14,7 @@ import org.hestiastore.index.datatype.TypeDescriptorNull;
 import org.hestiastore.index.directory.FsDirectory;
 import org.hestiastore.index.senku.SenkuIndex;
 import org.hestiastore.index.senku.SenkuMergeFunctionRegistry;
+import org.hestiastore.index.senku.SenkuMergeFunctions;
 import org.hestiastore.index.senku.SenkuReady;
 import org.hestiastore.index.senku.SenkuWriting;
 
@@ -83,22 +82,21 @@ public final class HestiaRoundStore {
     SenkuWriting<Long, NullValue> create(final Path directory,
             final RangeShardRouter router, final KeyPageCodec<Long> codec) {
         return create(directory,
-                (ToIntFunction<Long>) Objects.requireNonNull(router, "router"),
+                (LongToIntFunction) Objects.requireNonNull(router, "router"),
                 Objects.requireNonNull(codec, "codec"));
     }
 
     private SenkuWriting<Long, NullValue> create(final Path directory,
-            final ToIntFunction<Long> shardHashFunction,
+            final LongToIntFunction shardHashFunction,
             final KeyPageCodec<Long> codec) {
         final SenkuMergeFunctionRegistry<Long, NullValue> functions = new SenkuMergeFunctionRegistry<>();
-        functions.register((key, first, second) -> NULL);
+        functions.register(SenkuMergeFunctions.longSet());
         return SenkuIndex
                 .builder(new FsDirectory(asFile(directory)),
                         new TypeDescriptorLong(), new TypeDescriptorNull(),
                         functions)
                 .keyPageCodec(codec) //
                 .compression(Compression.zstd(3)) //
-                .shardHashFunction(shardHashFunction) //
                 .shardCount(SHARD_COUNT) //
                 .maxInMemoryEntries(MAX_IN_MEMORY_ENTRIES) //
                 .maxKeysPerPage(MAX_KEYS_PER_PAGE) //
@@ -107,7 +105,7 @@ public final class HestiaRoundStore {
                 .maintenanceQueueSize(MAINTENANCE_QUEUE_SIZE) //
                 .diskIoBufferSize(DISK_BUFFER_SIZE_BYTES) //
                 .maxEntriesPerPart(MAX_ENTRIES_PER_PART) //
-                .create();
+                .createLongSet(shardHashFunction);
     }
 
     /**

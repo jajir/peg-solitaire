@@ -18,6 +18,29 @@ import org.junit.jupiter.api.io.TempDir;
 
 class RoundStateSampleFileTest {
 
+    @Test
+    void versionTwoPersistsExplicitWeightsAndRejectsCorruptedWeightSum()
+            throws Exception {
+        final Path file = temporaryDirectory.resolve("weighted.state-sample");
+        final RoundStateSample source = RoundStateSample.fromWeighted(49, 100,
+                new long[] { 3, 7 }, new long[] { 90, 10 });
+        RoundStateSampleFile.write(file, source);
+        final byte[] data = Files.readAllBytes(file);
+        assertEquals(2, ByteBuffer.wrap(data).getInt(4));
+        assertEquals(68, data.length);
+        final RoundStateSample actual = RoundStateSampleFile.read(file, 49)
+                .orElseThrow();
+        assertTrue(actual.isWeighted());
+        assertEquals(0, actual.stride());
+        assertArrayEquals(source.states(), actual.states());
+        assertArrayEquals(source.weights(), actual.weights());
+        ByteBuffer.wrap(data).putLong(48, 89L);
+        updateChecksum(data);
+        Files.write(file, data);
+        assertThrows(IOException.class,
+                () -> RoundStateSampleFile.read(file, 49));
+    }
+
     @TempDir
     private Path temporaryDirectory;
 

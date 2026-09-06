@@ -13,6 +13,25 @@ import org.junit.jupiter.api.Test;
 class RangeShardRouterTest {
 
     @Test
+    void weightedForecastHandlesLargeMassWithoutOverflowAndSupportsPrimitiveRouting() {
+        final PegSolitaireBoard board = new SenkuBoard();
+        final BoardSymmetry symmetry = new BoardSymmetry(board);
+        final long initial = symmetry.canonicalize(board.initialState());
+        final RoundStateSample weighted = RoundStateSample.fromWeighted(49,
+                Long.MAX_VALUE, new long[] { initial },
+                new long[] { Long.MAX_VALUE });
+        final RangeShardRouter router = RangeShardRouter
+                .fromSourceSample(weighted, board, symmetry);
+        board.generateSuccessors(initial, child -> {
+            final long key = symmetry.canonicalize(child);
+            assertEquals(router.applyAsInt(Long.valueOf(key)),
+                    router.applyAsInt(key));
+            assertTrue(router.shard(key) >= 0 && router.shard(key) < 128);
+        });
+        assertEquals(0, router.shard(0));
+    }
+
+    @Test
     void boundaryBelongsToRightRangeIncludingSignedLongExtremes() {
         final RangeShardRouter router = new RangeShardRouter(
                 new long[] { Long.MIN_VALUE, -7L, 0L, Long.MAX_VALUE });

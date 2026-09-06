@@ -15,6 +15,7 @@ import org.hestiastore.index.chunkentryfile.KeyPageCodec;
 import org.hestiastore.index.datatype.NullValue;
 import org.hestiastore.index.senku.SenkuReady;
 import org.hestiastore.index.senku.SenkuWriting;
+import org.hestiastore.index.senku.SenkuLongKeySummary;
 
 /**
  * Initializes the search and advances one persisted breadth-first round.
@@ -31,6 +32,7 @@ public final class RoundEnumerator {
     private final RoundDirectories directories;
     private final int workerCount;
     private final int queueCapacity;
+    private final boolean verifyReadySummary;
 
     /**
      * Creates an enumerator for one persistent data root.
@@ -65,6 +67,22 @@ public final class RoundEnumerator {
      */
     public RoundEnumerator(final Path dataRoot, final BoardVariant boardVariant,
             final int workerCount, final int queueCapacity) {
+        this(dataRoot, boardVariant, workerCount, queueCapacity, false);
+    }
+
+    /**
+     * Creates an enumerator with optional expensive full-stream verification.
+     *
+     * @param dataRoot           persistent round root
+     * @param boardVariant       board implementation
+     * @param workerCount        board-processing workers
+     * @param queueCapacity      pending input batches
+     * @param verifyReadySummary scan every finalized output to verify count and
+     *                           order
+     */
+    public RoundEnumerator(final Path dataRoot, final BoardVariant boardVariant,
+            final int workerCount, final int queueCapacity,
+            final boolean verifyReadySummary) {
         if (workerCount < 1) {
             throw new IllegalArgumentException("workerCount must be positive");
         }
@@ -82,6 +100,7 @@ public final class RoundEnumerator {
         directories = new RoundDirectories(dataRoot);
         this.workerCount = workerCount;
         this.queueCapacity = queueCapacity;
+        this.verifyReadySummary = verifyReadySummary;
     }
 
     /**
@@ -112,8 +131,10 @@ public final class RoundEnumerator {
                 new RangeShardRouter(new long[0]),
                 encoding.codecForPopulation(Long.bitCount(initial)));
         writing.put(initial, NULL);
-        try (SenkuReady<Long, NullValue> ignored = writing.finishWriting()) {
-            // Finalization publishes the immutable round index.
+        try (SenkuReady<Long, NullValue> ready = writing.finishWriting()) {
+            if (verifyReadySummary) {
+                verifyReady(ready);
+            }
         }
         RoundStateSampleFile.write(directories.stateSampleFile(round),
                 sampler.snapshot());
@@ -131,7 +152,11 @@ public final class RoundEnumerator {
             // read-only pass. All subsequent rounds persist their own sample.
             final RoundStateSample sample = persisted.isPresent()
                     ? persisted.get()
-                    : sample(source);
+                    : distribution(source);
+            if (sample.stateCount() != source.recordCount()) {
+                throw new IOException(
+                        "Round sample count does not match ready manifests");
+            }
             final RangeShardRouter router = RangeShardRouter
                     .fromSourceSample(sample, board, symmetry);
             try (Stream<Entry<Long, NullValue>> entries = source.openStream()) {
@@ -165,7 +190,10 @@ public final class RoundEnumerator {
         processingResult = new ParallelRoundProcessor(board, symmetry,
                 workerCount, queueCapacity).process(iterator, destination);
         try (SenkuReady<Long, NullValue> ready = destination.finishWriting()) {
-            sample = sample(ready);
+            sample = distribution(ready);
+            if (verifyReadySummary) {
+                verifyReady(ready);
+            }
         }
         RoundStateSampleFile
                 .write(directories.stateSampleFile(destinationRound), sample);
@@ -182,5 +210,32 @@ public final class RoundEnumerator {
             output.forEach(entry -> sampler.add(entry.getKey()));
         }
         return sampler.snapshot();
+    }
+
+    private RoundStateSample distribution(
+            final SenkuReady<Long, NullValue> ready) {
+        final Optional<SenkuLongKeySummary> summary = ready.longKeySummary();
+        if (summary.isPresent()) {
+            final SenkuLongKeySummary weighted = summary.orElseThrow();
+            if (weighted.recordCount() != ready.recordCount()) {
+                throw new IllegalStateException(
+                        "Ready summary has inconsistent record count");
+            }
+            return RoundStateSample.fromWeighted(board.holeCount(),
+                    ready.recordCount(), weighted.keys(), weighted.weights());
+        }
+        final RoundStateSample scanned = sample(ready);
+        if (scanned.stateCount() != ready.recordCount()) {
+            throw new IllegalStateException(
+                    "Scanned ready count differs from terminal manifests");
+        }
+        return scanned;
+    }
+
+    private void verifyReady(final SenkuReady<Long, NullValue> ready) {
+        if (sample(ready).stateCount() != ready.recordCount()) {
+            throw new IllegalStateException(
+                    "Full ready verification found an inconsistent count");
+        }
     }
 }

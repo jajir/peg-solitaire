@@ -15,6 +15,14 @@ import org.junit.jupiter.api.Test;
 class PegSolitaireCliTest {
 
     @Test
+    void parsesExplicitFullReadyVerificationFlag() throws Exception {
+        final CliConfiguration configuration = PegSolitaireCli.parse(
+                new String[] { "count", "-b", "senku", "-d", "/tmp/rounds",
+                        "-w", "2", "-q", "4", "--verify-ready" });
+        assertTrue(configuration.verifyReadySummary());
+    }
+
+    @Test
     void parsesCountConfiguration() throws Exception {
         final CliConfiguration configuration = PegSolitaireCli
                 .parse(new String[] { "count", "--board", "english",

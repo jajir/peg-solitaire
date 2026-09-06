@@ -23,10 +23,11 @@ class PegSolitaireMainTest {
         final CapturedStreams countStreams = new CapturedStreams();
         final String directory = temporaryDirectory.toString();
 
-        final int countExitCode = PegSolitaireMain.run(new String[] {
-                "count", "--board", "english", "--directory", directory,
-                "--workers", "2", "--queue-capacity", "4"
-        }, countStreams.output(), countStreams.error());
+        final int countExitCode = PegSolitaireMain.run(
+                new String[] { "count", "--board", "english", "--directory",
+                        directory, "--workers", "2", "--queue-capacity", "4",
+                        "--verify-ready" },
+                countStreams.output(), countStreams.error());
 
         assertEquals(0, countExitCode);
         assertTrue(Files.isDirectory(temporaryDirectory.resolve("1")));
@@ -34,9 +35,10 @@ class PegSolitaireMainTest {
         assertEquals("", countStreams.errorText());
 
         final CapturedStreams statsStreams = new CapturedStreams();
-        final int statsExitCode = PegSolitaireMain.run(new String[] {
-                "stats", "--board", "english", "--directory", directory
-        }, statsStreams.output(), statsStreams.error());
+        final int statsExitCode = PegSolitaireMain.run(
+                new String[] { "stats", "--board", "english", "--directory",
+                        directory },
+                statsStreams.output(), statsStreams.error());
 
         assertEquals(0, statsExitCode);
         assertTrue(statsStreams.outputText().contains("State No."));
@@ -50,10 +52,11 @@ class PegSolitaireMainTest {
         final Path missing = temporaryDirectory.resolve("must-not-be-created");
         final CapturedStreams streams = new CapturedStreams();
 
-        final int exitCode = PegSolitaireMain.run(new String[] {
-                "count", "--board", "english", "--directory",
-                missing.toString(), "--workers", "0", "--queue-capacity", "4"
-        }, streams.output(), streams.error());
+        final int exitCode = PegSolitaireMain.run(
+                new String[] { "count", "--board", "english", "--directory",
+                        missing.toString(), "--workers", "0",
+                        "--queue-capacity", "4" },
+                streams.output(), streams.error());
 
         assertEquals(2, exitCode);
         assertFalse(Files.exists(missing));
@@ -74,10 +77,8 @@ class PegSolitaireMainTest {
 
     private static final class CapturedStreams {
 
-        private final ByteArrayOutputStream outputBytes =
-                new ByteArrayOutputStream();
-        private final ByteArrayOutputStream errorBytes =
-                new ByteArrayOutputStream();
+        private final ByteArrayOutputStream outputBytes = new ByteArrayOutputStream();
+        private final ByteArrayOutputStream errorBytes = new ByteArrayOutputStream();
         private final PrintStream output = new PrintStream(outputBytes, true,
                 StandardCharsets.UTF_8);
         private final PrintStream error = new PrintStream(errorBytes, true,
