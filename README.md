@@ -55,7 +55,17 @@ still performs complete deduplication, and reported generated-move counts still
 include duplicates. Cache state is discarded between rounds. Defaults use
 about 4.06 MiB for eight worker caches plus bounded input batches.
 
+Primitive Senku destinations also use a reusable 4,096-child buffer per worker.
+Exact pending duplicates are filtered separately from the committed cache;
+only a successful `putLongs` call updates that cache and submitted counts.
+Partial buffers drain before a source-batch task reports success. These buffers
+add about 640 KiB for eight workers at the default cache setting. Hestia groups
+the submitted keys by mutation stripe, sharing admission and lock work across
+small groups instead of acquiring a lock separately for every key.
+
 See [the combined optimization benchmark](doc/round-optimization-results.md).
+See [the batch/flush implementation and validation](doc/senku-batched-flush-results.md)
+for the latest compression-preserving changes and provisional timings.
 
 ## Forecast range sharding
 

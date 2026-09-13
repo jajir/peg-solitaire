@@ -37,12 +37,19 @@ import org.junit.jupiter.api.Test;
 class ParallelRoundProcessorTest {
 
     @Test
-    void explicitlySelectedLongSetUsesPrimitivePutsWithoutTheBoxedBridge() {
+    void explicitlySelectedLongSetUsesBatchPutsWithoutTheBoxedBridge() {
         final AtomicLong puts = new AtomicLong();
         final SenkuLongSetWriting destination = new SenkuLongSetWriting() {
             @Override
             public void putLong(final long key) {
-                puts.incrementAndGet();
+                throw new AssertionError(
+                        "Primitive destination must receive batched puts");
+            }
+
+            @Override
+            public void putLongs(final long[] keys, final int offset,
+                    final int length) {
+                puts.addAndGet(length);
             }
 
             @Override

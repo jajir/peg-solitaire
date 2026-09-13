@@ -63,6 +63,22 @@ class ExactRecentStateCacheTest {
         assertTrue(cache.submitIfAbsent(0L, submitted::add));
         assertTrue(cache.submitIfAbsent(0L, submitted::add));
         assertEquals(List.of(0L, 0L), submitted);
+        assertFalse(cache.isEnabled());
+        cache.rememberSuccessful(0L, ExactRecentStateCache.mixedHash(0L));
+        assertFalse(cache.contains(0L, ExactRecentStateCache.mixedHash(0L)));
+    }
+
+    @Test
+    void precomputedHashLookupDoesNotRecordAnUncommittedKey() {
+        final ExactRecentStateCache cache = new ExactRecentStateCache(64);
+        final int hash = ExactRecentStateCache.mixedHash(Long.MIN_VALUE);
+        assertTrue(cache.isEnabled());
+        assertFalse(cache.contains(Long.MIN_VALUE, hash));
+        cache.rememberSuccessful(Long.MIN_VALUE, hash);
+        assertTrue(cache.contains(Long.MIN_VALUE, hash));
+        assertFalse(cache.submitIfAbsent(Long.MIN_VALUE, ignored -> {
+            throw new AssertionError("Already committed key");
+        }));
     }
 
     @Test

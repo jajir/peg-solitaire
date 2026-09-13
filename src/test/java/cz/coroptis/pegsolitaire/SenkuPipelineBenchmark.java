@@ -20,9 +20,10 @@ import org.hestiastore.index.senku.SenkuWriting;
 
 /**
  * Opt-in round-12 comparison against the pre-pipeline checkpoint production
- * jar. Both modes use identical ranked pages, source keys, routing, kernel,
- * worker counts and cache sizes. Only the candidate uses ready metadata. Run in
- * isolated JVMs with exactly one production jar on the classpath.
+ * jar, or the latest pre-batching production jar. All modes use identical
+ * ranked pages, source keys, routing, kernel, worker counts and cache sizes.
+ * Historical baseline scans its output; batch-baseline and candidate both use
+ * ready metadata. Run isolated JVMs with one production jar on the classpath.
  */
 public final class SenkuPipelineBenchmark {
     private SenkuPipelineBenchmark() {
@@ -34,9 +35,10 @@ public final class SenkuPipelineBenchmark {
      */
     public static void main(final String[] args) throws Exception {
         if (args.length != 3 || !("baseline".equals(args[2])
+                || "batch-baseline".equals(args[2])
                 || "candidate".equals(args[2]))) {
             throw new IllegalArgumentException(
-                    "<corpus directory> <output parent> <baseline|candidate>");
+                    "<corpus directory> <output parent> <baseline|batch-baseline|candidate>");
         }
         Locale.setDefault(Locale.ROOT);
         final long[] source = read(Path.of(args[0], "senku-round-11.longs"),
@@ -83,7 +85,7 @@ public final class SenkuPipelineBenchmark {
         final RoundStateSample sample;
         try (SenkuReady<Long, NullValue> ready = writing.finishWriting()) {
             finishEnd = System.nanoTime();
-            if ("candidate".equals(mode)) {
+            if (!"baseline".equals(mode)) {
                 sample = metadataSample(ready);
             } else {
                 final SortedStateSampler sampler = new SortedStateSampler(49);

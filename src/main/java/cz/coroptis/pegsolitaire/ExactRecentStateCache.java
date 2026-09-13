@@ -37,25 +37,54 @@ final class ExactRecentStateCache {
             consumer.accept(state);
             return true;
         }
-        final int slot = slot(state);
-        final int word = slot >>> 6;
-        final long flag = 1L << (slot & 63);
-        if ((occupied[word] & flag) != 0L && keys[slot] == state) {
+        final int hash = mixedHash(state);
+        if (contains(state, hash)) {
             return false;
         }
         consumer.accept(state);
-        keys[slot] = state;
-        occupied[word] |= flag;
+        rememberSuccessful(state, hash);
         return true;
     }
 
-    private int slot(final long state) {
+    /** Returns whether this cache filters successfully submitted keys. */
+    boolean isEnabled() {
+        return keys.length != 0;
+    }
+
+    /**
+     * Checks an exact committed key using its already computed mixed hash.
+     * Pending buffered writes must be tracked separately from this cache.
+     */
+    boolean contains(final long state, final int hash) {
+        if (keys.length == 0) {
+            return false;
+        }
+        final int slot = hash & (keys.length - 1);
+        return (occupied[slot >>> 6] & (1L << (slot & 63))) != 0L
+                && keys[slot] == state;
+    }
+
+    /**
+     * Records a complete key only after its destination write succeeds. The
+     * supplied hash must come from {@link #mixedHash(long)}.
+     */
+    void rememberSuccessful(final long state, final int hash) {
+        if (keys.length == 0) {
+            return;
+        }
+        final int slot = hash & (keys.length - 1);
+        keys[slot] = state;
+        occupied[slot >>> 6] |= 1L << (slot & 63);
+    }
+
+    /** Mixes a key once for both pending membership and committed caching. */
+    static int mixedHash(final long state) {
         long mixed = state;
         mixed ^= mixed >>> 33;
         mixed *= 0xff51afd7ed558ccdL;
         mixed ^= mixed >>> 33;
         mixed *= 0xc4ceb9fe1a85ec53L;
         mixed ^= mixed >>> 33;
-        return (int) mixed & (keys.length - 1);
+        return (int) mixed;
     }
 }

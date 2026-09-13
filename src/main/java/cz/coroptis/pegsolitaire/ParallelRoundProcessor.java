@@ -152,15 +152,16 @@ final class ParallelRoundProcessor {
 
     private ProcessingResult processBatch(final long[] states,
             final int stateCount, final WorkerContext context) {
-        final long previousSubmittedMoves = context.submittedMoves;
+        final long previousSubmittedMoves = context.submittedMoves();
         long generatedMoves = 0L;
         for (int index = 0; index < stateCount; index++) {
             checkInterrupted();
             generatedMoves += kernel.generateCanonicalSuccessors(states[index],
                     context.transformedParent, context);
         }
+        context.flushChildren();
         return new ProcessingResult(stateCount, generatedMoves,
-                context.submittedMoves - previousSubmittedMoves, 1L);
+                context.submittedMoves() - previousSubmittedMoves, 1L);
     }
 
     /**
@@ -290,21 +291,40 @@ final class ParallelRoundProcessor {
         private final long[] transformedParent = new long[BoardSymmetry.TRANSFORM_COUNT];
         private final ExactRecentStateCache cache;
         private final LongConsumer submit;
+        private final LongSetBatchBuffer childBuffer;
         private long submittedMoves;
 
         private WorkerContext(final SenkuWriting<Long, NullValue> destination,
                 final int cacheCapacity) {
             cache = new ExactRecentStateCache(cacheCapacity);
-            submit = destination instanceof SenkuLongSetWriting
-                    ? ((SenkuLongSetWriting) destination)::putLong
-                    : state -> destination.put(state, NULL);
+            if (destination instanceof SenkuLongSetWriting longSet) {
+                childBuffer = new LongSetBatchBuffer(longSet, cache,
+                        LongSetBatchBuffer.DEFAULT_CAPACITY);
+                submit = null;
+            } else {
+                childBuffer = null;
+                submit = state -> destination.put(state, NULL);
+            }
         }
 
         @Override
         public void accept(final long state) {
-            if (cache.submitIfAbsent(state, submit)) {
+            if (childBuffer != null) {
+                childBuffer.accept(state);
+            } else if (cache.submitIfAbsent(state, submit)) {
                 submittedMoves++;
             }
+        }
+
+        private void flushChildren() {
+            if (childBuffer != null) {
+                childBuffer.flush();
+            }
+        }
+
+        private long submittedMoves() {
+            return childBuffer == null ? submittedMoves
+                    : childBuffer.submittedKeys();
         }
     }
 
