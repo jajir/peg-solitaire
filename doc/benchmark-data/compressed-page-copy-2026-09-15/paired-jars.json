@@ -1,0 +1,8 @@
+{
+  "differentEntries": [
+    "org/hestiastore/index/bytes/ConcatenatedByteSequence.class"
+  ],
+  "baselineSha256": "815da4482781bba2e10d91139a15fc075561713ea23dccc2cf7b8b033182d362",
+  "candidateSha256": "57f127944c6c856cb850cab87edd05ab8c02b88db76ffec40b04a610df08847d",
+  "method": "Use the same compiled JMH harness and dependencies; replace only the changed engine class with its fully verified candidate build."
+}

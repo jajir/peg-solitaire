@@ -1,0 +1,78 @@
+[
+  {
+    "version": "baseline",
+    "sourceCount": 4,
+    "entryCount": 1000000,
+    "duplicatePercent": 50,
+    "materializationCalls": 76,
+    "materializedBytes": 2762980,
+    "outputRecords": 500000,
+    "command": [
+      "java",
+      "-Xms1g",
+      "-Xmx1g",
+      "-XX:ActiveProcessorCount=4",
+      "-cp",
+      "/private/var/folders/7z/qsy5cvf57_7bpynh0y7qzd6r0000gn/T/hestia-page-copy-0o8yzoqu/merge-call-probe/baseline/classes:/private/var/folders/7z/qsy5cvf57_7bpynh0y7qzd6r0000gn/T/hestia-page-copy-0o8yzoqu/baseline.jar",
+      "org.hestiastore.index.senku.internal.MergeCallProbe",
+      "4"
+    ]
+  },
+  {
+    "version": "baseline",
+    "sourceCount": 64,
+    "entryCount": 1000000,
+    "duplicatePercent": 50,
+    "materializationCalls": 0,
+    "materializedBytes": 0,
+    "outputRecords": 500000,
+    "command": [
+      "java",
+      "-Xms1g",
+      "-Xmx1g",
+      "-XX:ActiveProcessorCount=4",
+      "-cp",
+      "/private/var/folders/7z/qsy5cvf57_7bpynh0y7qzd6r0000gn/T/hestia-page-copy-0o8yzoqu/merge-call-probe/baseline/classes:/private/var/folders/7z/qsy5cvf57_7bpynh0y7qzd6r0000gn/T/hestia-page-copy-0o8yzoqu/baseline.jar",
+      "org.hestiastore.index.senku.internal.MergeCallProbe",
+      "64"
+    ]
+  },
+  {
+    "version": "candidate",
+    "sourceCount": 4,
+    "entryCount": 1000000,
+    "duplicatePercent": 50,
+    "materializationCalls": 4,
+    "materializedBytes": 631060,
+    "outputRecords": 500000,
+    "command": [
+      "java",
+      "-Xms1g",
+      "-Xmx1g",
+      "-XX:ActiveProcessorCount=4",
+      "-cp",
+      "/private/var/folders/7z/qsy5cvf57_7bpynh0y7qzd6r0000gn/T/hestia-page-copy-0o8yzoqu/merge-call-probe/candidate/classes:/private/var/folders/7z/qsy5cvf57_7bpynh0y7qzd6r0000gn/T/hestia-page-copy-0o8yzoqu/candidate.jar",
+      "org.hestiastore.index.senku.internal.MergeCallProbe",
+      "4"
+    ]
+  },
+  {
+    "version": "candidate",
+    "sourceCount": 64,
+    "entryCount": 1000000,
+    "duplicatePercent": 50,
+    "materializationCalls": 0,
+    "materializedBytes": 0,
+    "outputRecords": 500000,
+    "command": [
+      "java",
+      "-Xms1g",
+      "-Xmx1g",
+      "-XX:ActiveProcessorCount=4",
+      "-cp",
+      "/private/var/folders/7z/qsy5cvf57_7bpynh0y7qzd6r0000gn/T/hestia-page-copy-0o8yzoqu/merge-call-probe/candidate/classes:/private/var/folders/7z/qsy5cvf57_7bpynh0y7qzd6r0000gn/T/hestia-page-copy-0o8yzoqu/candidate.jar",
+      "org.hestiastore.index.senku.internal.MergeCallProbe",
+      "64"
+    ]
+  }
+]

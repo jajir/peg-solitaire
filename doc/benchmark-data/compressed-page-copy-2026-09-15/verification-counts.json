@@ -1,0 +1,62 @@
+{
+  "monitoring-prometheus/surefire-reports": {
+    "tests": 2,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "wal-tools/surefire-reports": {
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "monitoring-rest-json/surefire-reports": {
+    "tests": 28,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "index-tools/surefire-reports": {
+    "tests": 8,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "benchmarks/surefire-reports": {
+    "tests": 54,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "monitoring-micrometer/surefire-reports": {
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "engine/surefire-reports": {
+    "tests": 2547,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "engine/failsafe-reports": {
+    "tests": 87,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1
+  },
+  "monitoring-console-web/surefire-reports": {
+    "tests": 1,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "monitoring-rest-json-api/surefire-reports": {
+    "tests": 26,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

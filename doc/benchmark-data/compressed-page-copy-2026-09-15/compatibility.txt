@@ -1,0 +1,17 @@
+baseline writes
+size=4096 compressed=2069 stored=8192 sha256=3806c716dd72085789544995279e1d89e9f923155257580d3f29e9fce663c159
+size=65536 compressed=32791 stored=40960 sha256=d604c8cccbe66a97ff40df94d42cecdfa516b56a9a19ee468205829bd3f533f3
+
+candidate writes
+size=4096 compressed=2069 stored=8192 sha256=3806c716dd72085789544995279e1d89e9f923155257580d3f29e9fce663c159
+size=65536 compressed=32791 stored=40960 sha256=d604c8cccbe66a97ff40df94d42cecdfa516b56a9a19ee468205829bd3f533f3
+
+baseline reads candidate fixtures
+cross-build read passed size=4096
+cross-build read passed size=65536
+
+candidate reads baseline fixtures
+cross-build read passed size=4096
+cross-build read passed size=65536
+
+Both builds persisted identical bytes for both fixtures.

@@ -1,0 +1,8 @@
+{
+  "candidateApplication": "/Users/jan/projects/peg-solitaire/target/peg-solitaire-page-copy-candidate.jar",
+  "candidateApplicationSha256": "af70a39a258ecf0462f54b656288ccdf619b4a42d0bfebebb8377316ee0648fb",
+  "runningApplicationSha256": "567daa7bc5762f74f3374143856814e7885d092c39274d596c4ac6bb3499b2c6",
+  "runningApplicationUnchanged": true,
+  "applicationTestsPassed": 153,
+  "applicationEngineClassMatchesBenchmarkedCandidate": true
+}

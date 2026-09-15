@@ -1,0 +1,216 @@
+[
+  {
+    "label": "fresh-slice-materialization",
+    "benchmark": "org.hestiastore.benchmark.bytes.ByteSequenceMaterializationBenchmark.materialize",
+    "params": {
+      "leafType": "SLICE",
+      "leaves": "1",
+      "length": "65536"
+    },
+    "mode": "avgt",
+    "unit": "ns/op",
+    "baseline": 1819.667578882751,
+    "candidate": 1936.5253718299903,
+    "baselineError": 452.6608163619816,
+    "candidateError": 310.5942208674296,
+    "performanceGainPercent": -6.42193081326361,
+    "confidenceIntervalsOverlap": true,
+    "baselineBytesPerOp": 65632.02481232457,
+    "candidateBytesPerOp": 65632.026345029,
+    "allocationReductionPercent": -2.3352996203485077e-06
+  },
+  {
+    "label": "fresh-slice-materialization",
+    "benchmark": "org.hestiastore.benchmark.bytes.ByteSequenceMaterializationBenchmark.materialize",
+    "params": {
+      "leafType": "SLICE",
+      "leaves": "4",
+      "length": "65536"
+    },
+    "mode": "avgt",
+    "unit": "ns/op",
+    "baseline": 8798.215377142604,
+    "candidate": 2654.966597521587,
+    "baselineError": 1600.2304326535304,
+    "candidateError": 393.15436878022234,
+    "performanceGainPercent": 69.82380535467362,
+    "confidenceIntervalsOverlap": false,
+    "baselineBytesPerOp": 197000.120235953,
+    "candidateBytesPerOp": 65832.03617055918,
+    "allocationReductionPercent": 66.58274315177567
+  },
+  {
+    "label": "fresh-slice-materialization",
+    "benchmark": "org.hestiastore.benchmark.bytes.ByteSequenceMaterializationBenchmark.materialize",
+    "params": {
+      "leafType": "SLICE",
+      "leaves": "16",
+      "length": "65536"
+    },
+    "mode": "avgt",
+    "unit": "ns/op",
+    "baseline": 15179.77006356609,
+    "candidate": 2524.6403553491477,
+    "baselineError": 3359.3573346356065,
+    "candidateError": 386.8949168529899,
+    "performanceGainPercent": 83.36838868588204,
+    "confidenceIntervalsOverlap": false,
+    "baselineBytesPerOp": 329272.20606482186,
+    "candidateBytesPerOp": 66648.03447208738,
+    "allocationReductionPercent": 79.75898565244623
+  },
+  {
+    "label": "flat-view-materialization-control",
+    "benchmark": "org.hestiastore.benchmark.bytes.ByteSequenceMaterializationBenchmark.materialize",
+    "params": {
+      "leafType": "VIEW",
+      "leaves": "2",
+      "length": "128"
+    },
+    "mode": "avgt",
+    "unit": "ns/op",
+    "baseline": 21.745482596044123,
+    "candidate": 23.845016089455957,
+    "baselineError": 3.2841474264249655,
+    "candidateError": 2.675553411901151,
+    "performanceGainPercent": -9.655032874707391,
+    "confidenceIntervalsOverlap": true,
+    "baselineBytesPerOp": 224.00029642572474,
+    "candidateBytesPerOp": 224.0003246235111,
+    "allocationReductionPercent": -1.2588280817737996e-05
+  },
+  {
+    "label": "flat-view-materialization-control",
+    "benchmark": "org.hestiastore.benchmark.bytes.ByteSequenceMaterializationBenchmark.materialize",
+    "params": {
+      "leafType": "VIEW",
+      "leaves": "2",
+      "length": "65536"
+    },
+    "mode": "avgt",
+    "unit": "ns/op",
+    "baseline": 2125.1072112918177,
+    "candidate": 2152.6581041756335,
+    "baselineError": 478.63063201029473,
+    "candidateError": 551.1823080320496,
+    "performanceGainPercent": -1.2964471974601155,
+    "confidenceIntervalsOverlap": true,
+    "baselineBytesPerOp": 65632.02897410285,
+    "candidateBytesPerOp": 65632.02923755591,
+    "allocationReductionPercent": -4.014092835902261e-07
+  },
+  {
+    "label": "cached-child-materialization-control",
+    "benchmark": "org.hestiastore.benchmark.bytes.ByteSequenceMaterializationBenchmark.cachedChildren",
+    "params": {
+      "leafType": "SLICE",
+      "leaves": "16",
+      "length": "65536"
+    },
+    "mode": "avgt",
+    "unit": "ns/op",
+    "baseline": 2213.7194473606696,
+    "candidate": 2473.178567589963,
+    "baselineError": 388.993120577842,
+    "candidateError": 261.68610439551895,
+    "performanceGainPercent": -11.720505980946982,
+    "confidenceIntervalsOverlap": true,
+    "baselineBytesPerOp": 65584.03017816633,
+    "candidateBytesPerOp": 65584.03362804232,
+    "allocationReductionPercent": -5.260237867510398e-06
+  },
+  {
+    "label": "zstd-complete-chunk-read",
+    "benchmark": "org.hestiastore.benchmark.chunkstore.ChunkStoreZstdReadBenchmark.read",
+    "params": {
+      "payloadSize": "4096"
+    },
+    "mode": "avgt",
+    "unit": "us/op",
+    "baseline": 1.9872431429368207,
+    "candidate": 1.9436076670440532,
+    "baselineError": 0.19008011060044494,
+    "candidateError": 0.2729255751719987,
+    "performanceGainPercent": 2.195779416719057,
+    "confidenceIntervalsOverlap": true,
+    "baselineBytesPerOp": 15269.36041787518,
+    "candidateBytesPerOp": 15264.02648799718,
+    "allocationReductionPercent": 0.03493224163964026
+  },
+  {
+    "label": "zstd-complete-chunk-read",
+    "benchmark": "org.hestiastore.benchmark.chunkstore.ChunkStoreZstdReadBenchmark.read",
+    "params": {
+      "payloadSize": "65536"
+    },
+    "mode": "avgt",
+    "unit": "us/op",
+    "baseline": 18.090725331108526,
+    "candidate": 14.414235951429816,
+    "baselineError": 1.6827154331007843,
+    "candidateError": 1.39047219475193,
+    "performanceGainPercent": 20.322509531205345,
+    "confidenceIntervalsOverlap": false,
+    "baselineBytesPerOp": 214904.2462277519,
+    "candidateBytesPerOp": 140856.1969683306,
+    "allocationReductionPercent": 34.45629882107887
+  },
+  {
+    "label": "ranked-maintenance-merge",
+    "benchmark": "org.hestiastore.index.senku.internal.SenkuMaintenanceMergeBenchmark.merge",
+    "params": {
+      "duplicatePercent": "50",
+      "entryCount": "1000000",
+      "sourceCount": "4"
+    },
+    "mode": "avgt",
+    "unit": "ms/op",
+    "baseline": 18.72313418423215,
+    "candidate": 17.48817109291649,
+    "baselineError": 1.7644665003704871,
+    "candidateError": 1.4699125010184335,
+    "performanceGainPercent": 6.595920742562933,
+    "confidenceIntervalsOverlap": true,
+    "baselineBytesPerOp": 15452526.888366913,
+    "candidateBytesPerOp": 12687046.67801161,
+    "allocationReductionPercent": 17.896621247345855
+  },
+  {
+    "label": "ranked-maintenance-merge",
+    "benchmark": "org.hestiastore.index.senku.internal.SenkuMaintenanceMergeBenchmark.merge",
+    "params": {
+      "duplicatePercent": "50",
+      "entryCount": "1000000",
+      "sourceCount": "64"
+    },
+    "mode": "avgt",
+    "unit": "ms/op",
+    "baseline": 36.070417453414365,
+    "candidate": 40.01655427535491,
+    "baselineError": 6.513235873722366,
+    "candidateError": 5.409733471286797,
+    "performanceGainPercent": -10.940091910599769,
+    "confidenceIntervalsOverlap": true,
+    "baselineBytesPerOp": 13502033.366626708,
+    "candidateBytesPerOp": 13502866.35994672,
+    "allocationReductionPercent": -0.006169391656740686
+  },
+  {
+    "label": "steady-chunk-write-control",
+    "benchmark": "org.hestiastore.benchmark.chunkstore.ChunkStoreSteadyWriteBenchmark.writeChunkSteadyState",
+    "params": {
+      "payloadSize": "4096"
+    },
+    "mode": "thrpt",
+    "unit": "ops/s",
+    "baseline": 911625.1175021885,
+    "candidate": 891850.7412633195,
+    "baselineError": 147400.05143578182,
+    "candidateError": 92025.87676913476,
+    "performanceGainPercent": -2.1691346430920966,
+    "confidenceIntervalsOverlap": true,
+    "baselineBytesPerOp": 570.6867379138644,
+    "candidateBytesPerOp": 570.6871539086582,
+    "allocationReductionPercent": -7.289372017105222e-05
+  }
+]
